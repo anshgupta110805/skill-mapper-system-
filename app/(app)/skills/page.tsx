@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   BarChart, 
@@ -9,296 +9,356 @@ import {
   YAxis, 
   CartesianGrid, 
   Tooltip, 
-  ResponsiveContainer, 
-  Legend,
-  Group
+  Legend, 
+  ResponsiveContainer,
+  LineChart,
+  Line
 } from 'recharts';
 import { 
-  Search, 
-  ArrowUpRight, 
-  ArrowDownRight, 
+  Zap, 
+  TrendingUp, 
+  TrendingDown, 
   Minus, 
-  Info,
-  Layers,
-  Sparkles,
-  TrendingUp,
-  TrendingDown,
+  Trash2, 
+  Plus, 
+  Swords, 
+  X,
+  Target,
   BookOpen,
-  DollarSign
+  Building
 } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { 
-  Sheet, 
-  SheetContent, 
-  SheetHeader, 
-  SheetTitle, 
-  SheetDescription 
-} from '@/components/ui/sheet';
-import { Separator } from '@/components/ui/separator';
+import { getProfile, saveProfile } from '@/lib/storage';
+import { scoreSkillDemandFlow } from '@/ai/flows/scoreSkillDemandFlow';
 
-// Mock Data
-const skills = [
-  { id: '1', name: 'TypeScript', category: 'Frontend', momentum: 'Rising', strength: 92, demand: 88, salary: 15000 },
-  { id: '2', name: 'React Native', category: 'Mobile', momentum: 'Neutral', strength: 75, demand: 65, salary: 8000 },
-  { id: '3', name: 'GenAI (Genkit)', category: 'AI/ML', momentum: 'Rising', strength: 60, demand: 95, salary: 25000 },
-  { id: '4', name: 'Docker', category: 'DevOps', momentum: 'Decaying', strength: 82, demand: 45, salary: -2000 },
-  { id: '5', name: 'Next.js', category: 'Frontend', momentum: 'Rising', strength: 88, demand: 92, salary: 12000 },
-  { id: '6', name: 'AWS Lambda', category: 'Cloud', momentum: 'Neutral', strength: 45, demand: 70, salary: 10000 },
+const chartData = [
+  { name: 'Remote', React: 95, TypeScript: 88, GraphQL: 72 },
+  { name: 'Bangalore', React: 90, TypeScript: 85, GraphQL: 60 },
+  { name: 'Mumbai', React: 85, TypeScript: 80, GraphQL: 55 },
+  { name: 'Delhi', React: 75, TypeScript: 70, GraphQL: 40 },
+  { name: 'Global', React: 98, TypeScript: 92, GraphQL: 80 },
 ];
 
-const demandByCity = [
-  { city: 'London', demand: 85, growth: 12 },
-  { city: 'NYC', demand: 92, growth: 15 },
-  { city: 'SF', demand: 98, growth: 20 },
-  { city: 'Berlin', demand: 70, growth: 8 },
-  { city: 'Bangalore', demand: 88, growth: 25 },
-];
+export default function SkillsPage() {
+  const [skills, setSkills] = useState<string[]>([]);
+  const [newSkill, setNewSkill] = useState('');
+  const [activeTab, setActiveTab] = useState<'profile' | 'battle'>('profile');
+  
+  // Drawer state
+  const [selectedSkill, setSelectedSkill] = useState<string | null>(null);
+  const [skillDetails, setSkillDetails] = useState<any>(null);
+  const [loadingDetails, setLoadingDetails] = useState(false);
 
-export default function SkillsIntelligencePage() {
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedSkill, setSelectedSkill] = useState<any>(null);
+  // Battle Mode state
+  const [jdText, setJdText] = useState('');
+  const [battleResult, setBattleResult] = useState<any>(null);
 
-  const filteredSkills = skills.filter(s => s.name.toLowerCase().includes(searchTerm.toLowerCase()));
+  useEffect(() => {
+    const profile = getProfile();
+    if (profile?.skills) {
+      setSkills(profile.skills);
+    }
+  }, []);
 
-  const momentumIcon = (m: string) => {
-    if (m === 'Rising') return <ArrowUpRight className="w-3 h-3 text-green-500" />;
-    if (m === 'Decaying') return <ArrowDownRight className="w-3 h-3 text-red-500" />;
-    return <Minus className="w-3 h-3 text-gray-500" />;
+  const handleAddSkill = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (newSkill.trim() && !skills.includes(newSkill.trim())) {
+      const updated = [...skills, newSkill.trim()];
+      setSkills(updated);
+      saveProfile({ skills: updated });
+      setNewSkill('');
+    }
   };
 
-  const momentumColor = (m: string) => {
-    if (m === 'Rising') return 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400';
-    if (m === 'Decaying') return 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400';
-    return 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400';
+  const handleRemoveSkill = (skill: string) => {
+    const updated = skills.filter(s => s !== skill);
+    setSkills(updated);
+    saveProfile({ skills: updated });
+  };
+
+  const openSkillDetail = async (skill: string) => {
+    setSelectedSkill(skill);
+    setLoadingDetails(true);
+    try {
+      const details = await scoreSkillDemandFlow({ skill });
+      setSkillDetails(details);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoadingDetails(false);
+    }
+  };
+
+  const runBattleMode = () => {
+    if (!jdText.trim()) return;
+    // Mock simulation for battle mode
+    setBattleResult({
+      matchScore: 68,
+      missing: ['GraphQL', 'Apollo', 'Microservices'],
+      exceeded: ['Tailwind', 'Figma'],
+      overlapping: ['React', 'TypeScript']
+    });
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div>
-          <h1 className="text-3xl font-bold font-headline tracking-tight">Skill Intelligence</h1>
-          <p className="text-muted-foreground">Deep dive into your professional inventory and market demand.</p>
-        </div>
+    <div className="max-w-7xl mx-auto space-y-6 relative">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4">
+         <div className="space-y-1">
+           <h1 className="text-3xl font-bold font-headline">Skill Intelligence</h1>
+           <p className="text-muted-foreground">Manage your toolkit and measure your market force.</p>
+         </div>
+         <div className="flex bg-muted p-1 rounded-xl">
+           <button onClick={() => setActiveTab('profile')} className={`px-4 py-2 rounded-lg text-sm font-bold transition-colors ${activeTab === 'profile' ? 'bg-white shadow-sm text-purple-700' : 'text-muted-foreground'}`}>My Profile</button>
+           <button onClick={() => setActiveTab('battle')} className={`px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition-colors ${activeTab === 'battle' ? 'bg-white shadow-sm text-purple-700' : 'text-muted-foreground'}`}>
+             <Swords className="w-4 h-4" /> Battle Mode
+           </button>
+         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Skill List Sidebar */}
-        <Card className="lg:col-span-1 h-[calc(100vh-250px)] flex flex-col">
-          <CardHeader className="pb-3">
-            <div className="relative">
-              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search skills..."
-                className="pl-8 bg-muted/50 focus-visible:ring-purple-500"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
+      {activeTab === 'profile' && (
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="grid grid-cols-1 md:grid-cols-12 gap-6">
+          
+          {/* Main Left Area */}
+          <div className="md:col-span-8 space-y-6">
+            
+            {/* Skill Demand Chart */}
+            <div className="p-6 bg-white dark:bg-slate-900 border rounded-2xl shadow-sm">
+               <div className="flex justify-between items-center mb-6">
+                 <h3 className="font-bold text-lg">Top Skills Demand by Region</h3>
+                 <select className="border rounded-lg px-3 py-1 text-sm bg-slate-50 dark:bg-slate-800">
+                    <option>All Regions</option>
+                    <option>India Only</option>
+                 </select>
+               </div>
+               <div className="h-72 w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={chartData} margin={{ top: 20, right: 30, left: 0, bottom: 5 }}>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                      <XAxis dataKey="name" tick={{ fontSize: 12 }} axisLine={false} tickLine={false} />
+                      <YAxis tick={{ fontSize: 12 }} axisLine={false} tickLine={false} />
+                      <Tooltip cursor={{ fill: 'transparent' }} contentStyle={{ borderRadius: '12px' }} />
+                      <Legend iconType="circle" />
+                      <Bar dataKey="React" fill="#8b5cf6" radius={[4, 4, 0, 0]} />
+                      <Bar dataKey="TypeScript" fill="#c4b5fd" radius={[4, 4, 0, 0]} />
+                      <Bar dataKey="GraphQL" fill="#fbcfe8" radius={[4, 4, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+               </div>
             </div>
-          </CardHeader>
-          <CardContent className="flex-1 overflow-auto px-2">
-            <div className="space-y-1">
-              {filteredSkills.map((skill) => (
-                <div
-                  key={skill.id}
-                  onClick={() => setSelectedSkill(skill)}
-                  className={`flex items-center justify-between p-3 rounded-xl cursor-pointer transition-all ${selectedSkill?.id === skill.id ? 'bg-purple-50 dark:bg-purple-900/20 border-purple-200 dark:border-purple-800/30' : 'hover:bg-muted'}`}
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="size-8 rounded-lg bg-background border flex items-center justify-center font-bold text-xs">
-                      {skill.name[0]}
-                    </div>
-                    <div>
-                      <p className="text-sm font-semibold">{skill.name}</p>
-                      <p className="text-[10px] text-muted-foreground">{skill.category}</p>
-                    </div>
-                  </div>
-                  <Badge className={`text-[10px] h-5 gap-1 ${momentumColor(skill.momentum)}`}>
-                    {momentumIcon(skill.momentum)}
-                    {skill.momentum}
-                  </Badge>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
 
-        {/* Intelligence Visualization & Insights */}
-        <div className="lg:col-span-2 space-y-6">
-          {/* Demand Chart */}
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <div>
-                <CardTitle className="text-lg">Global Skill Demand</CardTitle>
-                <CardDescription>Market intensity by major tech hubs</CardDescription>
-              </div>
-              <TrendingUp className="w-5 h-5 text-purple-500" />
-            </CardHeader>
-            <CardContent className="h-[300px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={demandByCity}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} opacity={0.1} />
-                  <XAxis dataKey="city" fontSize={12} tickLine={false} axisLine={false} />
-                  <YAxis fontSize={12} tickLine={false} axisLine={false} />
-                  <Tooltip 
-                    cursor={{fill: 'rgba(147, 51, 234, 0.05)'}}
-                    contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
-                  />
-                  <Bar dataKey="demand" fill="#9333ea" radius={[4, 4, 0, 0]} />
-                  <Bar dataKey="growth" fill="#22c55e" radius={[4, 4, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
-
-          {/* AI Recommendation Panel */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Card className="border-green-500/20 bg-green-500/[0.02]">
-              <CardHeader className="p-4">
-                <CardTitle className="text-sm font-bold flex items-center gap-2">
-                  <Sparkles className="w-4 h-4 text-green-500" />
-                  Add
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-4 pt-0 space-y-2">
-                {['Kubernetes', 'Go'].map(s => (
-                  <div key={s} className="text-xs p-2 rounded bg-background border flex items-center justify-between">
-                    {s} <ArrowUpRight className="w-3 h-3" />
-                  </div>
-                ))}
-              </CardContent>
-            </Card>
-
-            <Card className="border-red-500/20 bg-red-500/[0.02]">
-              <CardHeader className="p-4">
-                <CardTitle className="text-sm font-bold flex items-center gap-2">
-                  <TrendingDown className="w-4 h-4 text-red-500" />
-                  Drop
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-4 pt-0 space-y-2">
-                {['jQuery', 'C++'].map(s => (
-                  <div key={s} className="text-xs p-2 rounded bg-background border flex items-center justify-between">
-                    {s} <ArrowDownRight className="w-3 h-3" />
-                  </div>
-                ))}
-              </CardContent>
-            </Card>
-
-            <Card className="border-blue-500/20 bg-blue-500/[0.02]">
-              <CardHeader className="p-4">
-                <CardTitle className="text-sm font-bold flex items-center gap-2">
-                  <Layers className="w-4 h-4 text-blue-500" />
-                  Deepen
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-4 pt-0 space-y-2">
-                {['Next.js', 'PostgreSQL'].map(s => (
-                  <div key={s} className="text-xs p-2 rounded bg-background border flex items-center justify-between">
-                    {s} <BookOpen className="w-3 h-3" />
-                  </div>
-                ))}
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-      </div>
-
-      {/* Skill Detail Sheet */}
-      <Sheet open={!!selectedSkill} onOpenChange={() => setSelectedSkill(null)}>
-        <SheetContent className="sm:max-w-md bg-background/95 backdrop-blur-xl">
-          {selectedSkill && (
-            <div className="h-full flex flex-col">
-              <SheetHeader className="pb-6">
-                <div className="size-16 rounded-2xl bg-purple-600 text-white flex items-center justify-center text-3xl font-bold mb-4 shadow-lg shadow-purple-500/20">
-                  {selectedSkill.name[0]}
-                </div>
-                <SheetTitle className="text-2xl font-bold">{selectedSkill.name}</SheetTitle>
-                <SheetDescription>{selectedSkill.category} • Current Strength: {selectedSkill.strength}%</SheetDescription>
-              </SheetHeader>
-              
-              <div className="flex-1 overflow-auto space-y-8">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="p-4 rounded-2xl bg-muted/50 border">
-                    <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
-                      <TrendingUp className="w-3 h-3" /> Market Demand
-                    </div>
-                    <div className="text-2xl font-bold">{selectedSkill.demand}%</div>
-                  </div>
-                  <div className="p-4 rounded-2xl bg-muted/50 border">
-                    <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
-                      <DollarSign className="w-3 h-3" /> Salary Impact
-                    </div>
-                    <div className="text-2xl font-bold">+{selectedSkill.salary >= 0 ? '$' : '-$'}{Math.abs(selectedSkill.salary).toLocaleString()}</div>
-                  </div>
-                </div>
-
-                <div className="space-y-4">
-                  <h4 className="font-bold flex items-center gap-2">
-                    <BookOpen className="w-4 h-4 text-purple-500" />
-                    Learning Resources
-                  </h4>
-                  <div className="space-y-3">
-                    {[
-                      { title: 'Advanced patterns in ' + selectedSkill.name, type: 'Course' },
-                      { title: 'Building production ' + selectedSkill.name + ' projects', type: 'Project' }
-                    ].map((res, i) => (
-                      <div key={i} className="group p-4 rounded-xl border hover:border-purple-500/30 hover:bg-purple-50/50 dark:hover:bg-purple-900/10 cursor-pointer transition-all">
-                        <p className="text-xs text-purple-600 dark:text-purple-400 font-medium mb-1">{res.type}</p>
-                        <p className="text-sm font-semibold flex items-center justify-between">
-                          {res.title}
-                          <ArrowRight className="w-4 h-4 opacity-0 group-hover:opacity-100 group-hover:translate-x-1 transition-all" />
-                        </p>
+            {/* Inventory List */}
+            <div className="p-6 bg-white dark:bg-slate-900 border rounded-2xl shadow-sm">
+               <div className="flex justify-between items-center mb-6">
+                 <h3 className="font-bold text-lg">Your Skill Inventory ({skills.length})</h3>
+                 <form onSubmit={handleAddSkill} className="flex gap-2 relative">
+                    <input 
+                      value={newSkill} 
+                      onChange={e => setNewSkill(e.target.value)}
+                      placeholder="Add a skill..." 
+                      className="border rounded-lg pl-3 pr-10 py-1.5 text-sm w-48 focus:outline-none focus:ring-2 ring-purple-500" 
+                    />
+                    <button type="submit" className="absolute right-1 top-1 p-1 text-purple-600 bg-purple-50 rounded-md">
+                      <Plus className="w-4 h-4" />
+                    </button>
+                 </form>
+               </div>
+               
+               <div className="space-y-3">
+                 {skills.map(skill => (
+                   <div key={skill} onClick={() => openSkillDetail(skill)} className="flex items-center justify-between p-3 border rounded-xl hover:border-purple-300 hover:bg-purple-50/50 dark:hover:bg-purple-900/10 cursor-pointer transition-colors group">
+                      <div className="flex items-center gap-4 flex-1">
+                         <div className="w-10 h-10 bg-slate-100 dark:bg-slate-800 rounded-lg flex items-center justify-center shrink-0">
+                           <Zap className="w-5 h-5 text-amber-500" />
+                         </div>
+                         <div className="flex-1 w-full">
+                           <div className="flex items-center justify-between mb-1">
+                              <h4 className="font-bold">{skill}</h4>
+                              <div className="flex items-center gap-1 bg-green-100 text-green-700 px-2 py-0.5 rounded text-xs font-bold">
+                                <TrendingUp className="w-3 h-3" /> Rising
+                              </div>
+                           </div>
+                           <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
+                             <div className="bg-purple-500 h-full rounded-full" style={{ width: `${Math.floor(Math.random() * 40) + 50}%` }} />
+                           </div>
+                         </div>
                       </div>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="space-y-4">
-                  <h4 className="font-bold flex items-center gap-2">
-                    <Info className="w-4 h-4 text-blue-500" />
-                    Market Insights
-                  </h4>
-                  <p className="text-sm text-muted-foreground leading-relaxed">
-                    The demand for {selectedSkill.name} is currently {selectedSkill.momentum.toLowerCase()} across major tech hubs. 
-                    {selectedSkill.salary > 0 
-                      ? ` Proficiency in this skill is valued highly, contributing an estimated $${selectedSkill.salary.toLocaleString()} premium to base salaries.`
-                      : ` However, market saturation has led to a slight decline in salary premiums for this specific expertise.`}
-                  </p>
-                </div>
-              </div>
-
-              <div className="pt-6 mt-6 border-t">
-                <Button className="w-full bg-purple-600 hover:bg-purple-700 h-12 rounded-xl text-white font-bold gap-2">
-                  <Zap className="w-4 h-4" /> Add to Goal List
-                </Button>
-              </div>
+                      <div className="flex items-center gap-4 ml-8">
+                         <div className="text-right hidden sm:block">
+                           <p className="text-sm font-bold text-green-600">+$12k</p>
+                           <p className="text-xs text-muted-foreground">Premium</p>
+                         </div>
+                         <button onClick={(e) => { e.stopPropagation(); handleRemoveSkill(skill); }} className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg opacity-0 group-hover:opacity-100 transition-all">
+                           <Trash2 className="w-4 h-4" />
+                         </button>
+                      </div>
+                   </div>
+                 ))}
+                 {skills.length === 0 && (
+                   <p className="text-center text-muted-foreground py-8">No skills in your inventory yet.</p>
+                 )}
+               </div>
             </div>
-          )}
-        </SheetContent>
-      </Sheet>
-    </div>
-  );
-}
+          </div>
 
-function ArrowRight(props: any) {
-  return (
-    <svg
-      {...props}
-      xmlns="http://www.w3.org/2000/svg"
-      width="24"
-      height="24"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M5 12h14" />
-      <path d="m12 5 7 7-7 7" />
-    </svg>
+          {/* Right Column: Recommendations */}
+          <div className="md:col-span-4 space-y-6">
+            <div className="bg-white dark:bg-slate-900 border rounded-2xl shadow-sm overflow-hidden flex flex-col h-full">
+               <div className="p-4 border-b bg-gradient-to-r from-purple-50 to-indigo-50 dark:from-purple-900/20 dark:to-indigo-900/20">
+                 <h3 className="font-bold">AI Skill Strategy</h3>
+                 <p className="text-xs text-muted-foreground">Based on current trajectory</p>
+               </div>
+               <div className="p-4 space-y-6 flex-1">
+                 <div>
+                   <h4 className="text-sm font-bold text-green-700 mb-2 flex items-center gap-1"><Plus className="w-4 h-4"/> Add These Next</h4>
+                   <div className="flex flex-wrap gap-2">
+                     {['GraphQL', 'Docker', 'AWS'].map(s => (
+                       <button key={s} onClick={() => { setSkills(prev => [...prev, s]); setNewSkill(''); }} className="px-3 py-1 bg-green-50 text-green-700 border border-green-200 rounded-full text-xs font-semibold hover:bg-green-100 transition-colors">{s}</button>
+                     ))}
+                   </div>
+                 </div>
+                 <div>
+                   <h4 className="text-sm font-bold text-blue-700 mb-2 flex items-center gap-1"><Target className="w-4 h-4"/> Deepen Mastery</h4>
+                   <div className="flex flex-wrap gap-2">
+                     {['React', 'TypeScript'].map(s => (
+                       <span key={s} className="px-3 py-1 bg-blue-50 text-blue-700 border border-blue-200 rounded-full text-xs font-semibold">{s}</span>
+                     ))}
+                   </div>
+                 </div>
+                 <div>
+                   <h4 className="text-sm font-bold text-red-700 mb-2 flex items-center gap-1"><Minus className="w-4 h-4"/> Deprioritize</h4>
+                   <div className="flex flex-wrap gap-2">
+                     {['jQuery', 'Bootstrap'].map(s => (
+                       <span key={s} className="px-3 py-1 bg-red-50 text-red-700 border border-red-200 rounded-full text-xs font-semibold line-through">{s}</span>
+                     ))}
+                   </div>
+                 </div>
+               </div>
+            </div>
+          </div>
+        </motion.div>
+      )}
+
+      {/* Battle Mode UI */}
+      {activeTab === 'battle' && (
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
+          <div className="p-6 bg-white dark:bg-slate-900 border rounded-2xl shadow-sm text-center">
+             <Swords className="w-12 h-12 text-purple-600 mx-auto mb-4" />
+             <h2 className="text-2xl font-bold font-headline mb-2">JD Battle Simulator</h2>
+             <p className="text-muted-foreground w-full max-w-2xl mx-auto mb-6">Paste a Job Description below to see exactly how your skills stack up against employer requirements.</p>
+             <textarea 
+               value={jdText}
+               onChange={e => setJdText(e.target.value)}
+               className="w-full h-40 border rounded-xl p-4 text-sm focus:outline-none focus:ring-2 ring-purple-500 bg-slate-50 dark:bg-slate-800"
+               placeholder="Paste job description here..."
+             />
+             <button onClick={runBattleMode} disabled={!jdText.trim()} className="mt-4 px-8 py-3 bg-purple-600 text-white font-bold rounded-xl disabled:opacity-50 hover:bg-purple-700 transition">
+                Simulate Match
+             </button>
+          </div>
+
+          {battleResult && (
+             <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="p-6 bg-purple-600 text-white rounded-2xl flex flex-col items-center justify-center relative overflow-hidden">
+                   <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10" />
+                   <h3 className="font-bold text-lg mb-2 z-10">Match Score</h3>
+                   <div className="text-7xl font-bold font-headline z-10">{battleResult.matchScore}%</div>
+                   <p className="text-purple-100 mt-2 z-10 text-sm">Strong Foundation</p>
+                </div>
+                
+                <div className="p-6 bg-white dark:bg-slate-900 border rounded-2xl shadow-sm">
+                   <h3 className="font-bold text-red-600 flex items-center gap-2 mb-4"><X className="w-5 h-5"/> Missing Skills</h3>
+                   <div className="flex flex-wrap gap-2">
+                     {battleResult.missing.map((s: string) => <span key={s} className="px-3 py-1 border border-red-200 bg-red-50 text-red-700 rounded-full text-sm">{s}</span>)}
+                   </div>
+                </div>
+
+                <div className="p-6 bg-white dark:bg-slate-900 border rounded-2xl shadow-sm">
+                   <h3 className="font-bold text-green-600 flex items-center gap-2 mb-4"><Zap className="w-5 h-5"/> Exceeded Skills</h3>
+                   <div className="flex flex-wrap gap-2">
+                     {battleResult.exceeded.map((s: string) => <span key={s} className="px-3 py-1 border border-green-200 bg-green-50 text-green-700 rounded-full text-sm">{s}</span>)}
+                   </div>
+                </div>
+             </motion.div>
+          )}
+        </motion.div>
+      )}
+
+      {/* Detail Drawer (Slide over) */}
+      <AnimatePresence>
+        {selectedSkill && (
+          <>
+            <motion.div 
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} 
+              className="fixed inset-0 bg-black/40 z-40" 
+              onClick={() => setSelectedSkill(null)} 
+            />
+            <motion.div 
+              initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }} transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+              className="fixed top-0 right-0 w-full md:w-[500px] h-full bg-background shadow-2xl border-l z-50 flex flex-col p-6 overflow-y-auto"
+            >
+               <button onClick={() => setSelectedSkill(null)} className="absolute top-6 right-6 p-2 bg-muted rounded-full hover:bg-slate-200 transition"><X className="w-5 h-5" /></button>
+               
+               <div className="mb-8">
+                 <div className="w-16 h-16 bg-purple-100 text-purple-700 rounded-2xl flex items-center justify-center mb-4"><Zap className="w-8 h-8" /></div>
+                 <h2 className="text-3xl font-bold font-headline">{selectedSkill}</h2>
+                 <p className="text-muted-foreground mt-1">Detailed market intelligence</p>
+               </div>
+
+               {loadingDetails ? (
+                 <div className="flex flex-col items-center justify-center flex-1 space-y-3">
+                   <Loader2 className="w-8 h-8 animate-spin text-purple-600" />
+                   <p className="text-sm text-muted-foreground">Analyzing market footprint...</p>
+                 </div>
+               ) : skillDetails && (
+                 <div className="space-y-8">
+                    {/* Top Stats */}
+                    <div className="grid grid-cols-2 gap-4">
+                       <div className="p-4 border rounded-xl bg-slate-50 dark:bg-slate-900">
+                          <p className="text-xs text-muted-foreground font-bold uppercase mb-1">Demand Score</p>
+                          <p className="text-2xl font-bold text-purple-700">{skillDetails.score}/100</p>
+                       </div>
+                       <div className="p-4 border rounded-xl bg-slate-50 dark:bg-slate-900">
+                          <p className="text-xs text-muted-foreground font-bold uppercase mb-1">Salary Premium</p>
+                          <p className="text-2xl font-bold text-green-600">{skillDetails.salaryImpact}</p>
+                       </div>
+                    </div>
+
+                    {/* Chart */}
+                    <div className="border rounded-2xl p-4 shadow-sm">
+                       <h4 className="font-bold mb-4 text-sm">12 Month Demand Trend</h4>
+                       <div className="h-40 w-full">
+                          <ResponsiveContainer width="100%" height="100%">
+                             <LineChart data={[{name: 'Jan', val: 40}, {name: 'Mar', val: 65}, {name: 'Jun', val: 80}, {name: 'Sep', val: skillDetails.score}]}>
+                                <Line type="monotone" dataKey="val" stroke="#8b5cf6" strokeWidth={3} dot={false} />
+                                <Tooltip />
+                             </LineChart>
+                          </ResponsiveContainer>
+                       </div>
+                    </div>
+
+                    {/* Top Companies */}
+                    <div>
+                      <h4 className="font-bold flex items-center gap-2 mb-3"><Building className="w-4 h-4"/> Who is hiring?</h4>
+                      <div className="space-y-2">
+                        {skillDetails.topCompanies?.map((c: string) => (
+                           <div key={c} className="px-4 py-3 border rounded-xl text-sm font-medium flex justify-between items-center bg-slate-50/50">
+                             {c} <ChevronRight className="w-4 h-4 text-slate-300" />
+                           </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Recommended Action */}
+                    <div className="bg-gradient-to-r from-purple-600 to-indigo-600 p-6 rounded-2xl text-white">
+                       <h4 className="font-bold flex items-center gap-2 mb-2"><BookOpen className="w-4 h-4"/> Recommended Action</h4>
+                       <p className="text-sm text-purple-100 mb-4">Estimated time to master advanced concepts: {skillDetails.timeToLearnWeeks} weeks.</p>
+                       <button className="w-full bg-white text-purple-700 font-bold py-2 rounded-xl">Add to Learning Path</button>
+                    </div>
+                 </div>
+               )}
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+    </div>
   );
 }

@@ -17,19 +17,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Check if user is authenticated (check localStorage, cookies, etc.)
-    const token = localStorage.getItem('skillmap_token');
-    const userData = localStorage.getItem('skillmap_user');
-    
-    if (token && userData) {
-      setIsAuthenticated(true);
-      setUser(JSON.parse(userData));
-    } else {
+    try {
+      // Check if user is authenticated (check localStorage, cookies, etc.)
+      const token = localStorage.getItem('skillmap_token');
+      const userData = localStorage.getItem('skillmap_user');
+      
+      if (token && userData) {
+        setIsAuthenticated(true);
+        setUser(JSON.parse(userData));
+      } else {
+        setIsAuthenticated(false);
+        setUser(null);
+      }
+    } catch (error) {
+      console.error("Auth initialization error:", error);
       setIsAuthenticated(false);
       setUser(null);
+      localStorage.removeItem('skillmap_user');
+      localStorage.removeItem('skillmap_token');
+    } finally {
+      setLoading(false);
     }
-    
-    setLoading(false);
   }, []);
 
   const login = () => {

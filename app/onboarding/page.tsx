@@ -8,12 +8,17 @@ import {
   Briefcase, 
   Target, 
   CheckCircle2, 
+  CheckCircle,
   ChevronRight, 
   ChevronLeft,
   Loader2,
   X,
   Plus
 } from 'lucide-react';
+import * as pdfjsLib from 'pdfjs-dist';
+import mammoth from 'mammoth';
+
+pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -35,10 +40,23 @@ export default function OnboardingPage() {
   const router = useRouter();
   const [currentStep, setCurrentStep] = useState(1);
   const [loading, setLoading] = useState(false);
-  const [profile, setProfile] = useState({
-    skills: [] as string[],
-    targetRoles: [] as string[],
-    targetCities: [] as string[],
+  const [isExtracting, setIsExtracting] = useState(false);
+  const [extractionSuccess, setExtractionSuccess] = useState(false);
+  const [extractionError, setExtractionError] = useState<string | null>(null);
+  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+  const hasExtracted = React.useRef(false);
+
+  const [profile, setProfile] = useState<{
+    skills: string[];
+    targetRoles: string[];
+    targetCities: string[];
+    timeline: string;
+    goal: string;
+    resumeUploaded?: boolean;
+  }>({
+    skills: [],
+    targetRoles: [],
+    targetCities: [],
     timeline: '12',
     goal: 'Career Growth'
   });
@@ -49,24 +67,87 @@ export default function OnboardingPage() {
   const nextStep = () => setCurrentStep(prev => Math.min(prev + 1, steps.length));
   const prevStep = () => setCurrentStep(prev => Math.max(prev - 1, 1));
 
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  const extractTextFromPDF = async (file: File): Promise<string> => {
+    const arrayBuffer = await file.arrayBuffer();
+    const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+    let fullText = '';
+    for (let i = 1; i <= pdf.numPages; i++) {
+      const page = await pdf.getPage(i);
+      const content = await page.getTextContent();
+      const pageText = content.items
+        .map((item: any) => item.str)
+        .join(' ');
+      fullText += pageText + '\n';
+    }
+    if (!fullText.trim()) throw new Error('PDF text extraction returned empty');
+    return fullText;
+  };
 
-    setLoading(true);
-    // In a real app, we'd use mammoth/pdfjs here. 
-    // For this simulation, we simulate the text extraction and call the Genkit flow.
-    setTimeout(async () => {
-      try {
-        const skills = await extractSkillsFlow({ document: "Simulated resume content for " + file.name });
-        setProfile({ ...profile, skills: skills as string[] });
-        nextStep();
-      } catch (err) {
-        console.error(err);
-      } finally {
-        setLoading(false);
+  const extractTextFromDOCX = async (file: File): Promise<string> => {
+    const arrayBuffer = await file.arrayBuffer();
+    const result = await mammoth.extractRawText({ arrayBuffer });
+    if (!result.value.trim()) throw new Error('DOCX extraction returned empty');
+    return result.value;
+  };
+
+  const handleResumeUpload = async (file: File) => {
+    if (hasExtracted.current) return;
+    
+    try {
+      setIsExtracting(true);
+      setExtractionError(null);
+      setExtractionSuccess(false);
+
+      const validTypes = ['application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
+      if (!validTypes.includes(file.type) && !file.name.endsWith('.docx')) {
+        throw new Error('Please upload a PDF or DOCX file only');
       }
-    }, 2000);
+
+      if (file.size > 5 * 1024 * 1024) {
+        throw new Error('File size must be under 5MB');
+      }
+      
+      let text = '';
+      if (file.type === 'application/pdf') {
+        text = await extractTextFromPDF(file);
+      } else {
+        text = await extractTextFromDOCX(file);
+      }
+
+      if (!text || text.trim().length < 50) {
+        throw new Error('Could not read text from your file. Try a different file.');
+      }
+      
+      hasExtracted.current = true;
+      const result: any = await extractSkillsFlow({ documentText: text });
+      
+      setProfile(prev => ({ 
+        ...prev, 
+        skills: result.skills || [], 
+        experienceYears: result.experienceYears,
+        currentRole: result.currentRole,
+        resumeUploaded: true 
+      }));
+      
+      setIsExtracting(false);
+      setExtractionSuccess(true);
+      
+      setTimeout(() => setCurrentStep(2), 1500);
+      
+    } catch (error: any) {
+      console.error('Extraction failed:', error);
+      setIsExtracting(false);
+      setExtractionError(error.message || 'Failed to extract skills. Please try again.');
+      hasExtracted.current = false;
+    }
+  };
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setUploadedFile(file);
+      handleResumeUpload(file);
+    }
   };
 
   const addItem = (list: 'targetRoles' | 'targetCities', val: string, setVal: (v: string) => void) => {
@@ -131,13 +212,39 @@ export default function OnboardingPage() {
                 >
                   {currentStep === 1 && (
                     <div className="space-y-8">
-                      <div className="border-2 border-dashed border-purple-500/20 rounded-3xl p-12 text-center space-y-4 bg-purple-500/[0.02] hover:bg-purple-500/[0.04] transition-colors relative">
-                        {loading ? (
+                      <div className={`border-2 border-dashed ${extractionError ? 'border-red-500 bg-red-50 dark:bg-red-950/20' : 'border-purple-500/20 bg-purple-500/[0.02]'} rounded-3xl p-12 text-center space-y-4 hover:bg-purple-500/[0.04] transition-colors relative`}>
+                        {isExtracting && uploadedFile && (
                           <div className="flex flex-col items-center gap-4">
                             <Loader2 className="size-12 text-purple-600 animate-spin" />
                             <p className="text-sm font-bold text-purple-600">AI is extracting your skills...</p>
                           </div>
-                        ) : (
+                        )}
+                        
+                        {extractionSuccess && (
+                          <div className="text-center space-y-3 p-6">
+                            <div className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center mx-auto">
+                              <CheckCircle className="w-8 h-8 text-green-600" />
+                            </div>
+                            <p className="font-semibold text-green-700">
+                              {profile.skills.length} skills extracted!
+                            </p>
+                            <div className="flex flex-wrap gap-2 justify-center">
+                              {profile.skills.slice(0, 6).map(skill => (
+                                <span key={skill} className="px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-xs font-medium">
+                                  {skill}
+                                </span>
+                              ))}
+                              {profile.skills.length > 6 && (
+                                <span className="px-3 py-1 bg-gray-100 text-gray-500 rounded-full text-xs">
+                                  +{profile.skills.length - 6} more
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-sm text-gray-400">Moving to next step...</p>
+                          </div>
+                        )}
+
+                        {!isExtracting && !extractionSuccess && (
                           <>
                             <div className="size-16 rounded-full bg-purple-100 dark:bg-purple-900/40 flex items-center justify-center mx-auto">
                               <FileUp className="size-8 text-purple-600" />
@@ -149,12 +256,38 @@ export default function OnboardingPage() {
                             <Label htmlFor="resume-upload" className="inline-block px-8 py-3 bg-purple-600 text-white rounded-xl font-bold cursor-pointer transition-transform active:scale-95">
                                Select File
                             </Label>
-                            <Input id="resume-upload" type="file" className="hidden" onChange={handleFileUpload} />
+                            <Input id="resume-upload" type="file" className="hidden" accept=".pdf,.docx" onChange={handleFileUpload} />
+                            
+                            {extractionError && (
+                              <div className="mt-4 space-y-3">
+                                <p className="text-red-500 text-sm text-center">{extractionError}</p>
+                                <button
+                                  onClick={() => {
+                                    setExtractionError(null)
+                                    setUploadedFile(null)
+                                    hasExtracted.current = false
+                                  }}
+                                  className="w-full border border-red-300 text-red-500 rounded-lg py-2 text-sm hover:bg-red-50 transition"
+                                >
+                                  Try again
+                                </button>
+                              </div>
+                            )}
                           </>
                         )}
                       </div>
                       <div className="text-center">
-                        <Button variant="link" onClick={nextStep} className="text-muted-foreground text-xs">Skip for now, I'll enter manually</Button>
+                        <Button 
+                          variant="link" 
+                          onClick={() => {
+                             setIsExtracting(false);
+                             hasExtracted.current = false;
+                             setCurrentStep(2);
+                          }} 
+                          className="text-muted-foreground text-xs"
+                        >
+                          Skip for now, I'll enter manually
+                        </Button>
                       </div>
                     </div>
                   )}

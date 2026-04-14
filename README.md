@@ -1,64 +1,47 @@
-# SkillMapper AI 🚀
+# SkillMapper System 🚀
 
-SkillMapper AI is a production-grade, AI-powered skill intelligence and career navigation platform. It helps professionals map their current skills, identify gaps, and simulate career paths or migrations with high-fidelity, data-driven insights.
+> **AI-Powered Local Career Intelligence & Navigation Engine**
+> 
+> *Developed by **Vidur Kumar***
 
-## ✨ Key Features
+SkillMapper System is an advanced, offline-first career intelligence platform built to calculate, forecast, and visualize software engineering career trajectories securely on your local machine.
 
-- **🤖 AI-Powered Copilot**: Interactive career assistant for personalized guidance.
-- **📊 Adaptive Dashboards**: Real-time visualization of skill supply and demand.
-- **🗺️ Career Route Designer**: Simulate advanced career transitions with AI logic.
-- **🚢 Migration Simulator**: Assess skill portability across industries and geographies.
-- **📈 Learning Path Generator**: Dynamic, personalized roadmaps to reach your career goals.
-- **📱 Onboarding & Tracking**: Seamless multi-step onboarding and progress monitoring.
+Instead of relying on cloud APIs, SkillMapper uses **Google Genkit** and **Ollama** (`llama-3`) to parse your profile, generate deterministic market insights, and map out purchasing power dynamics entirely locally, safeguarding your privacy.
 
-## 🛠️ Tech Stack
+## ✨ Core Features
 
-- **Framework**: Next.js 14 (App Router)
-- **Language**: TypeScript
-- **Styling**: Tailwind CSS & Shadcn UI
-- **AI Engine**: Google Genkit & GenAI
-- **Integrations**: Firebase (Storage & Auth)
-- **Design System**: Stitch-optimized custom components
+- 🔋 **Gravity Score Engine**: Multi-metric KPI tracker to measure your current career momentum visually with `Recharts`.
+- 🗺️ **Relocation Simulator**: Calculate exact purchasing power parity (PPP) transitions across global tech hubs with visual flight arc SVG mapping.
+- 🧑‍💼 **JD Battle Simulator**: Instant match evaluation highlighting missing proficiencies, exceeding skills, and required certs against target job descriptions.
+- 🏙️ **City Intelligence Dynamics**: Responsive charts extracting localized salaries and the highest-demand tech tooling in specific geographic grids.
+- 📚 **AI Learning Path Synthesis**: Week-by-week curriculum generator explicitly tuned to close your specific structural market gaps.
+- 🤖 **Omnipresent Copilot**: Floating context-aware assistant mapped to the dashboard router that suggests contextual insight queries automatically.
+- 📄 **Printable Reporting**: Media-query managed, production-ready PDF rendering layout of your entire strategic DNA profile.
+
+## 🛠️ Technology Stack
+
+- **Framework**: Next.js (App Router) + React
+- **Styling**: Tailwind CSS + Shadcn UI methodologies
+- **Analytics & Vis**: Recharts + Framer Motion
+- **AI Infrastructure**: Google Genkit (`genkitx-ollama`) + Llama-3
+- **State Management**: Native Browser LocalStorage Architecture
+- **Language**: TypeScript Native
 
 ## 🚀 Getting Started
 
-### Prerequisites
+### 1. Requirements
+Ensure you have [Node.js](https://nodejs.org/en/) installed securely on your local environment.
 
-- Node.js 18+
-- npm or yarn
-- Firebase account (optional, for auth/storage)
+### 2. Boot Local App
+```bash
+# Install all required dependency branches
+npm install
 
-### Installation
+# Boot development environment
+npm run dev
+```
 
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/anshgupta110805/skillmap-ai.git
-   cd skillmap-ai
-   ```
-
-2. Install dependencies:
-   ```bash
-   npm install
-   ```
-
-3. Run the development server:
-   ```bash
-   npm run dev
-   ```
-
-4. Open [http://localhost:3000](http://localhost:3000) in your browser.
-
-## 📁 Project Structure
-
-- `app/`: Next.js application routes and components.
-- `ai/`: AI logic, flows, and schema validation.
-- `components/`: Reusable UI components (Shadcn + custom).
-- `lib/`: Core utilities and adapter layers.
-- `knowledge_base/`: Curated intelligence for skill mapping.
-
-## 📄 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+Visit `http://localhost:3000` to interact with the application offline-first! Let the intelligence platform compile your custom metrics.
 
 ---
-Built with ❤️ by Ansh Gupta
+*Architected and maintained by Vidur Kumar*

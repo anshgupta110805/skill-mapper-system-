@@ -1,153 +1,127 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import { usePathname } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { MessageSquare, X, Send, Sparkles } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { ScrollArea } from '@/components/ui/scroll-area';
+import { MessageCircle, X, Send, Sparkles, Loader2 } from 'lucide-react';
+import { usePathname } from 'next/navigation';
 import { copilotChatFlow } from '@/ai/flows/copilotChatFlow';
+import { getProfile } from '@/lib/storage';
 
-interface Message {
-  role: 'user' | 'assistant';
-  content: string;
-}
-
-const suggestedPrompts: Record<string, string[]> = {
-  '/dashboard': ["Why is my Gravity Score low?", "Show me my top risks", "What's the best local opportunity?"],
-  '/skills': ["What should I learn next?", "Which skills are decaying in value?", "How is my skill momentum calculated?"],
-  '/career-routes': ["Which path is safest for me?", "How can I reach 'Bold' path salary faster?", "What skills am I missing for senior roles?"],
-  '/migration': ["Is London better than NYC for my role?", "Explain the cost of living gap", "Top companies in San Francisco?"],
-  default: ["How can I improve my profile?", "What are the trending skills today?", "Recommend a learning path"]
-};
-
-export const CopilotWidget = () => {
+export function CopilotWidget() {
   const [isOpen, setIsOpen] = useState(false);
-  const [messages, setMessages] = useState<Message[]>([]);
+  const [messages, setMessages] = useState<{role: 'user' | 'ai', text: string, time: string}[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const pathname = usePathname();
-  const scrollRef = useRef<HTMLDivElement>(null);
-
-  const prompts = suggestedPrompts[pathname] || suggestedPrompts.default;
+  const endOfMessagesRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    if (endOfMessagesRef.current) {
+      endOfMessagesRef.current.scrollIntoView({ behavior: 'smooth' });
     }
-  }, [messages]);
+  }, [messages, isLoading]);
 
-  const handleSend = async (content: string = input) => {
-    if (!content.trim() || isLoading) return;
+  const getSuggestedPrompts = () => {
+    if (pathname.includes('/dashboard')) return ["Why is my score low?", "What should I do this week?", "Show my best opportunity"];
+    if (pathname.includes('/skills')) return ["What skill should I add?", "Which skills are dying?", "Compare me to market"];
+    if (pathname.includes('/career-routes')) return ["Which path is best for me?", "How long to become a PM?", "What's missing from my profile?"];
+    return ["What can you help me with?", "Analyze my profile", "Find me a job"];
+  };
 
-    const userMessage: Message = { role: 'user', content };
-    setMessages((prev) => [...prev, userMessage]);
+  const handleSend = async (text: string) => {
+    if (!text.trim()) return;
+    const newMsg = { role: 'user' as const, text, time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) };
+    setMessages(prev => [...prev, newMsg]);
     setInput('');
     setIsLoading(true);
 
     try {
-      const { stream } = await copilotChatFlow({
-        messages: [...messages, userMessage],
-        pageContext: pathname
-      });
-
-      let fullResponse = '';
-      setMessages((prev) => [...prev, { role: 'assistant', content: '' }]);
-
-      for await (const chunk of stream) {
-        fullResponse += chunk;
-        setMessages((prev) => {
-          const last = prev[prev.length - 1];
-          return [...prev.slice(0, -1), { ...last, content: fullResponse }];
-        });
-      }
-    } catch (error) {
-      console.error('Chat error:', error);
+      const profile = getProfile() || {};
+      const response = await copilotChatFlow({ message: text, pageContext: pathname, userProfile: profile });
+      setMessages(prev => [...prev, { role: 'ai', text: response, time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }]);
+    } catch (e) {
+      setMessages(prev => [...prev, { role: 'ai', text: "Sorry, I'm having trouble connecting to Ollama locally right now.", time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }]);
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <div className="fixed bottom-6 right-6 z-50">
+    <>
       <AnimatePresence>
         {isOpen && (
-          <motion.div
+          <motion.div 
             initial={{ opacity: 0, y: 20, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 20, scale: 0.95 }}
-            className="mb-4 w-[380px] sm:w-[420px]"
+            className="fixed bottom-20 right-6 w-[380px] max-w-[calc(100vw-3rem)] h-[500px] max-h-[80vh] bg-background border shadow-2xl rounded-2xl flex flex-col z-50 overflow-hidden"
           >
-            <Card className="border-purple-500/20 shadow-2xl backdrop-blur-xl bg-background/95">
-              <CardHeader className="bg-purple-600 dark:bg-purple-900 text-white rounded-t-lg p-4 flex flex-row items-center justify-between">
-                <CardTitle className="text-sm font-medium flex items-center gap-2">
-                  <Sparkles className="w-4 h-4" />
-                  SkillMapper Copilot
-                </CardTitle>
-                <Button variant="ghost" size="icon" className="text-white hover:bg-white/20 h-8 w-8" onClick={() => setIsOpen(false)}>
-                  <X className="w-4 h-4" />
-                </Button>
-              </CardHeader>
-              <CardContent className="p-0">
-                <ScrollArea className="h-[400px] p-4" ref={scrollRef}>
-                  {messages.length === 0 && (
-                    <div className="space-y-4">
-                      <p className="text-sm text-muted-foreground">Hello! I'm your AI career assistant. How can I help you on this page?</p>
-                      <div className="flex flex-wrap gap-2">
-                        {prompts.map((p) => (
-                          <Button key={p} variant="outline" size="sm" className="text-xs border-purple-200 dark:border-purple-800 hover:bg-purple-50 dark:hover:bg-purple-950" onClick={() => handleSend(p)}>
-                            {p}
-                          </Button>
-                        ))}
-                      </div>
+            <div className="bg-purple-600 p-4 text-white flex justify-between items-center">
+               <div className="flex items-center gap-2">
+                 <Sparkles className="w-5 h-5" />
+                 <h3 className="font-bold">SkillMapper Copilot</h3>
+               </div>
+               <button onClick={() => setIsOpen(false)} className="hover:bg-purple-700 p-1 rounded transition-colors"><X className="w-5 h-5" /></button>
+            </div>
+            
+            <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-50 dark:bg-slate-950/50">
+               {messages.length === 0 && (
+                 <div className="text-center text-muted-foreground p-6 space-y-2">
+                   <p className="text-sm">Hi! I'm your AI career assistant. Ask me anything about your skills or market trends.</p>
+                 </div>
+               )}
+               {messages.map((m, i) => (
+                 <div key={i} className={`flex flex-col ${m.role === 'user' ? 'items-end' : 'items-start'}`}>
+                    <div className={`max-w-[85%] rounded-2xl px-4 py-2 text-sm ${m.role === 'user' ? 'bg-purple-600 text-white rounded-br-none' : 'bg-white dark:bg-slate-900 border rounded-bl-none shadow-sm'}`}>
+                      {m.text}
                     </div>
-                  )}
-                  <div className="space-y-4">
-                    {messages.map((m, i) => (
-                      <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                        <div className={`max-w-[85%] p-3 rounded-2xl text-sm ${m.role === 'user' ? 'bg-purple-600 text-white' : 'bg-muted border border-border'}`}>
-                          {m.content}
-                        </div>
-                      </div>
-                    ))}
-                    {isLoading && !messages[messages.length-1]?.content && (
-                      <div className="flex justify-start">
-                        <div className="bg-muted p-3 rounded-2xl animate-pulse">
-                          Thinking...
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </ScrollArea>
-              </CardContent>
-              <CardFooter className="p-4 border-t">
-                <form className="flex w-full gap-2" onSubmit={(e) => { e.preventDefault(); handleSend(); }}>
-                  <Input 
-                    placeholder="Ask anything..." 
+                    <span className="text-[10px] text-muted-foreground mt-1 px-1">{m.time}</span>
+                 </div>
+               ))}
+               {isLoading && (
+                 <div className="flex items-start">
+                   <div className="bg-white dark:bg-slate-900 border rounded-2xl rounded-bl-none px-4 py-3 shadow-sm flex items-center gap-1">
+                      <div className="w-1.5 h-1.5 bg-purple-500 rounded-full animate-bounce" style={{animationDelay: '0ms'}} />
+                      <div className="w-1.5 h-1.5 bg-purple-500 rounded-full animate-bounce" style={{animationDelay: '150ms'}} />
+                      <div className="w-1.5 h-1.5 bg-purple-500 rounded-full animate-bounce" style={{animationDelay: '300ms'}} />
+                   </div>
+                 </div>
+               )}
+               <div ref={endOfMessagesRef} />
+            </div>
+
+            <div className="p-3 bg-white dark:bg-slate-900 border-t space-y-3">
+               <div className="flex gap-2 text-xs overflow-x-auto pb-1 scrollbar-hide">
+                 {getSuggestedPrompts().map(p => (
+                   <button key={p} onClick={() => handleSend(p)} className="flex-none whitespace-nowrap px-3 py-1.5 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded-full hover:bg-purple-200 transition-colors font-medium border border-purple-200 dark:border-purple-800">
+                     {p}
+                   </button>
+                 ))}
+               </div>
+               <div className="flex gap-2">
+                  <input 
                     value={input} 
-                    onChange={(e) => setInput(e.target.value)} 
-                    disabled={isLoading}
-                    className="focus-visible:ring-purple-500"
+                    onChange={e => setInput(e.target.value)} 
+                    onKeyDown={e => e.key === 'Enter' && handleSend(input)}
+                    placeholder="Ask Copilot..." 
+                    className="flex-1 bg-muted px-4 py-2 rounded-xl text-sm focus:outline-none focus:ring-2 ring-purple-500/50"
                   />
-                  <Button type="submit" size="icon" disabled={isLoading || !input.trim()} className="bg-purple-600 hover:bg-purple-700">
+                  <button onClick={() => handleSend(input)} disabled={isLoading || !input.trim()} className="bg-purple-600 text-white p-2 rounded-xl disabled:opacity-50 transition-colors">
                     <Send className="w-4 h-4" />
-                  </Button>
-                </form>
-              </CardFooter>
-            </Card>
+                  </button>
+               </div>
+            </div>
           </motion.div>
         )}
       </AnimatePresence>
 
-      <Button
-        size="lg"
-        className="rounded-full w-14 h-14 shadow-lg bg-purple-600 hover:bg-purple-700 text-white flex items-center justify-center p-0"
+      <button 
         onClick={() => setIsOpen(!isOpen)}
+        className="fixed bottom-6 right-6 p-4 rounded-full bg-gradient-to-tr from-purple-600 to-indigo-500 text-white shadow-xl shadow-purple-500/30 hover:scale-105 transition-transform z-50 flex items-center justify-center group"
       >
-        <MessageSquare className="w-6 h-6" />
-      </Button>
-    </div>
+         <MessageCircle className="w-6 h-6 group-hover:scale-110 transition-transform" />
+         {!isOpen && messages.length === 0 && <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full border-2 border-background" />}
+      </button>
+    </>
   );
-};
+}

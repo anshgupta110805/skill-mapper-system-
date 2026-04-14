@@ -1,186 +1,157 @@
 'use client';
 
 import React from 'react';
-import { motion } from 'framer-motion';
 import { 
   FileText, 
   Download, 
-  Zap, 
   MapPin, 
-  Route, 
-  Target, 
-  CheckCircle2, 
+  Briefcase, 
+  Calendar,
+  Zap,
+  TrendingUp,
+  Target,
   ShieldCheck,
-  Award,
-  Calendar
+  CheckSquare
 } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Separator } from '@/components/ui/separator';
+import { getProfile } from '@/lib/storage';
 
-export default function CareerDNAReportPage() {
+export default function CareerReportPage() {
+  const profile = getProfile() || { skills: ['React', 'TypeScript'], goal: 'Career Growth', timeline: '12' };
+  
   const handlePrint = () => {
     window.print();
   };
 
   return (
-    <div className="max-w-4xl mx-auto space-y-8 print:p-0">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 print:hidden">
-        <div>
-          <h1 className="text-3xl font-bold font-headline tracking-tight">Career DNA Report</h1>
-          <p className="text-muted-foreground">Certified summary of your market position and growth path.</p>
-        </div>
-        <Button onClick={handlePrint} className="bg-purple-600 hover:bg-purple-700 font-bold gap-2">
-           <Download className="w-4 h-4" />
-           Export to PDF
-        </Button>
+    <div className="max-w-4xl mx-auto space-y-6">
+      
+      {/* Top Banner (hidden when printing) */}
+      <div className="flex flex-col sm:flex-row justify-between items-center gap-4 bg-gradient-to-r from-purple-600 to-indigo-600 p-6 rounded-2xl text-white shadow-xl print:hidden">
+         <div>
+            <h1 className="text-2xl font-bold font-headline">Career DNA Report</h1>
+            <p className="text-purple-100 text-sm">Generated securely via local AI projection.</p>
+         </div>
+         <button onClick={handlePrint} className="flex flex-nowrap shrink-0 items-center justify-center gap-2 bg-white text-purple-700 px-6 py-3 rounded-xl font-bold shadow-lg hover:bg-slate-50 transition-colors">
+            <Download className="w-5 h-5" /> Download PDF Status
+         </button>
       </div>
 
-      <div id="report-content" className="space-y-6 print:space-y-4 print:max-w-none">
-        {/* Header Section */}
-        <Card className="border-purple-500/20 shadow-xl overflow-hidden print:shadow-none print:border-none">
-          <div className="h-2 bg-gradient-to-r from-purple-600 via-indigo-500 to-blue-500" />
-          <CardHeader className="flex flex-row items-center justify-between p-8">
-            <div className="space-y-1">
-              <div className="flex items-center gap-2 mb-2">
-                 <div className="size-10 rounded-xl bg-purple-600 text-white flex items-center justify-center font-bold text-xl">SM</div>
-                 <h2 className="text-xl font-bold text-purple-600">SkillMapper AI</h2>
-              </div>
-              <h3 className="text-4xl font-black tracking-tighter">Ansh Gupta</h3>
-              <p className="text-lg text-muted-foreground font-medium uppercase tracking-widest">Senior AI Engineer</p>
+      {/* The Printable Document */}
+      <div id="print-area" className="bg-white print:bg-transparent dark:bg-slate-900 border print:border-none rounded-3xl print:rounded-none p-8 md:p-12 shadow-sm print:shadow-none space-y-12">
+         
+         {/* Title / Header */}
+         <div className="border-b pb-8 flex justify-between items-end print:pb-4">
+            <div>
+               <h1 className="text-4xl font-black font-headline text-slate-900 dark:text-white print:text-black tracking-tight mb-2">SkillMapper AI Projection</h1>
+               <div className="flex gap-4 text-sm font-bold text-muted-foreground print:text-gray-600">
+                  <span className="flex items-center gap-1"><Briefcase className="w-4 h-4"/> Tech & Engineering</span>
+                  <span className="flex items-center gap-1"><MapPin className="w-4 h-4"/> Global Trajectory</span>
+                  <span className="flex items-center gap-1"><Calendar className="w-4 h-4"/> {new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric'})}</span>
+               </div>
             </div>
             <div className="text-right">
-               <div className="text-6xl font-black text-purple-600">78</div>
-               <p className="text-xs font-bold uppercase tracking-tighter text-muted-foreground">Gravity Score</p>
+               <div className="w-16 h-16 rounded-2xl bg-purple-600 text-white flex items-center justify-center mx-auto mb-2 font-bold text-2xl print:bg-black print:text-white">68</div>
+               <p className="text-xs font-bold uppercase tracking-widest text-slate-500">Gravity Score</p>
             </div>
-          </CardHeader>
-        </Card>
+         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 print:gap-4">
-          {/* Top Skills */}
-          <Card className="md:col-span-2 border-purple-500/10">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-bold uppercase tracking-widest flex items-center gap-2">
-                <Award className="w-4 h-4 text-purple-500" />
-                Top Skills & Momentum
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                {[
-                  { name: 'TypeScript', score: 92, status: 'Rising' },
-                  { name: 'GenAI (Genkit)', score: 88, status: 'Rising' },
-                  { name: 'Next.js', score: 85, status: 'Stable' },
-                  { name: 'Node.js', score: 78, status: 'Stable' },
-                ].map((s) => (
-                  <div key={s.name} className="flex flex-col gap-1">
-                    <div className="flex justify-between text-xs font-semibold">
-                      <span>{s.name}</span>
-                      <span className="text-purple-600">{s.status}</span>
-                    </div>
-                    <div className="h-1.5 w-full bg-muted rounded-full">
-                       <div className="h-full bg-purple-600 rounded-full" style={{ width: `${s.score}%` }} />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
+         {/* Executive Summary */}
+         <div>
+           <h2 className="text-xl font-bold border-b-2 border-purple-600 print:border-black pb-2 mb-4 uppercase tracking-widest text-slate-900 dark:text-white print:text-black">Executive Summary</h2>
+           <p className="text-slate-700 dark:text-slate-300 print:text-black leading-relaxed font-medium">
+             Based on active signals mapping against your {profile.skills.length}-skill footprint, you hold strong competitive framing for modern web frameworks, but are tracking below median logic boundaries for cloud containerization. The most lucrative short-term pivot involves acquiring Go or Rust foundations alongside Kubernetes to qualify for Senior Platform Engineering roles.
+           </p>
+         </div>
 
-          {/* Best Target City */}
-          <Card className="border-purple-500/10">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-bold uppercase tracking-widest flex items-center gap-2">
-                <MapPin className="w-4 h-4 text-purple-500" />
-                Optimal Market
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="text-center space-y-2">
-               <p className="text-3xl font-black">San Francisco</p>
-               <Badge className="bg-green-100 text-green-700">+24% Financial Advantage</Badge>
-               <p className="text-[10px] text-muted-foreground mt-2 italic">Based on demand/cost ratio for AI Engineers</p>
-            </CardContent>
-          </Card>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 print:gap-4">
-          {/* Best Path */}
-          <Card className="md:col-span-1 border-purple-500/10 bg-purple-600 text-white">
-            <CardHeader className="pb-2 text-white">
-              <CardTitle className="text-sm font-bold uppercase tracking-widest flex items-center gap-2">
-                <Route className="w-4 h-4" />
-                Recommended Route
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-1">
-                <p className="text-2xl font-black">Accelerated</p>
-                <p className="text-xs opacity-80">12 Month Target</p>
-              </div>
-              <Separator className="bg-white/20" />
-              <div className="space-y-2">
-                {[
-                  'CTO Track',
-                  '+$45k Salary Delta',
-                  'Moderate Risk'
-                ].map(t => (
-                  <div key={t} className="flex items-center gap-2 text-sm font-bold">
-                    <ShieldCheck className="w-4 h-4" /> {t}
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Next Actions */}
-          <Card className="md:col-span-2 border-purple-500/10">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-bold uppercase tracking-widest flex items-center gap-2">
-                <Target className="w-4 h-4 text-purple-500" />
-                Strategic Next Steps
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-               {[
-                 { action: 'Certify in Cloud Solution Architecture', impact: 'High' },
-                 { action: 'Open source 2 GenAI projects', impact: 'Medium' },
-                 { action: 'Relocate or switch to US-based remote role', impact: 'Very High' },
-               ].map((a, i) => (
-                 <div key={i} className="flex items-center gap-4 p-3 rounded-xl border bg-muted/20">
-                    <div className="bg-background size-6 rounded-full flex items-center justify-center font-bold text-xs ring-1 ring-purple-500/20">{i+1}</div>
-                    <div className="flex-1">
-                      <p className="text-sm font-bold">{a.action}</p>
-                      <p className="text-[10px] uppercase font-bold text-muted-foreground">Impact: {a.impact}</p>
-                    </div>
-                    <CheckCircle2 className="w-4 h-4 text-muted-foreground/30" />
+         {/* Two Columns Layout */}
+         <div className="grid grid-cols-2 gap-12">
+            <div>
+               <h2 className="text-xl font-bold border-b-2 border-purple-600 print:border-black pb-2 mb-4 uppercase tracking-widest text-slate-900 dark:text-white print:text-black">Current Core Strengths</h2>
+               <div className="space-y-4">
+                 <div className="flex justify-between items-center bg-slate-50 dark:bg-slate-800 print:bg-gray-100 p-3 rounded-lg border">
+                   <div className="flex items-center gap-2 font-bold text-slate-900 dark:text-white print:text-black"><Zap className="w-4 h-4 text-green-500"/> React Ecosystem</div>
+                   <span className="text-sm font-bold text-green-600">High Demand</span>
                  </div>
-               ))}
-            </CardContent>
-          </Card>
-        </div>
+                 <div className="flex justify-between items-center bg-slate-50 dark:bg-slate-800 print:bg-gray-100 p-3 rounded-lg border">
+                   <div className="flex items-center gap-2 font-bold text-slate-900 dark:text-white print:text-black"><Zap className="w-4 h-4 text-green-500"/> Typescript</div>
+                   <span className="text-sm font-bold text-green-600">High Demand</span>
+                 </div>
+                 <div className="flex justify-between items-center bg-slate-50 dark:bg-slate-800 print:bg-gray-100 p-3 rounded-lg border">
+                   <div className="flex items-center gap-2 font-bold text-slate-900 dark:text-white print:text-black"><TrendingUp className="w-4 h-4 text-amber-500"/> Node.js</div>
+                   <span className="text-sm font-bold text-amber-600">Stable</span>
+                 </div>
+               </div>
+            </div>
 
-        {/* Footer section for print */}
-        <div className="hidden print:block pt-8 text-center border-t text-[10px] text-muted-foreground uppercase tracking-widest italic">
-           SkillMapper AI Analysis Report • Generated on {new Date().toLocaleDateString()} • CONFIDENTIAL
-        </div>
+            <div>
+               <h2 className="text-xl font-bold border-b-2 border-purple-600 print:border-black pb-2 mb-4 uppercase tracking-widest text-slate-900 dark:text-white print:text-black">Recommended Career Evolution</h2>
+               <div className="border rounded-2xl p-5 border-blue-200 dark:border-blue-900 bg-blue-50 dark:bg-blue-900/10 print:border-gray-300 print:bg-white text-slate-900 dark:text-slate-100 print:text-black">
+                 <div className="flex items-center justify-between mb-4">
+                   <h3 className="font-bold text-lg flex items-center gap-2"><Target className="w-5 h-5 text-blue-600 print:text-black"/> Principal UX Eng</h3>
+                   <span className="px-2 py-1 bg-green-100 text-green-700 font-bold text-xs rounded uppercase">Safe Roadmap</span>
+                 </div>
+                 <p className="text-sm mb-4">Capitalize on current strengths by leaning deeper into highly complex client-state management.</p>
+                 <div className="space-y-1 text-sm font-medium">
+                   <div className="flex justify-between border-b pb-1"><span>Target Salary</span> <span className="font-bold text-green-600">+$25k Delta</span></div>
+                   <div className="flex justify-between border-b pb-1"><span>Transition Risk</span> <span className="font-bold">2/10 (Low)</span></div>
+                   <div className="flex justify-between"><span>Missing Gaps</span> <span className="font-bold text-red-500">2 Skills</span></div>
+                 </div>
+               </div>
+            </div>
+         </div>
+
+         {/* 90-Day Plan Table */}
+         <div>
+           <h2 className="text-xl font-bold border-b-2 border-purple-600 print:border-black pb-2 mb-4 uppercase tracking-widest text-slate-900 dark:text-white print:text-black">Actionable 90-Day Directive</h2>
+           <table className="w-full text-left border-collapse border mt-4 text-slate-900 dark:text-white print:text-black">
+              <thead>
+                <tr className="bg-slate-100 dark:bg-slate-800 print:bg-gray-200">
+                   <th className="p-3 border font-bold">Month</th>
+                   <th className="p-3 border font-bold">Objective</th>
+                   <th className="p-3 border font-bold">Deliverable</th>
+                </tr>
+              </thead>
+              <tbody className="text-sm font-medium">
+                <tr>
+                   <td className="p-3 border font-bold text-center">Month 1</td>
+                   <td className="p-3 border">Master state-machine logic logic architecture.</td>
+                   <td className="p-3 border flex items-center gap-2"><CheckSquare className="w-4 h-4 text-purple-600 print:text-black"/> Build isolated xState prototype</td>
+                </tr>
+                <tr>
+                   <td className="p-3 border font-bold text-center bg-slate-50/50 dark:bg-slate-900 print:bg-white">Month 2</td>
+                   <td className="p-3 border bg-slate-50/50 dark:bg-slate-900 print:bg-white">Acquire AWS Cloud Practitioner accreditation.</td>
+                   <td className="p-3 border bg-slate-50/50 dark:bg-slate-900 print:bg-white flex items-center gap-2"><CheckSquare className="w-4 h-4 text-purple-600 print:text-black"/> Pass foundational exam</td>
+                </tr>
+                <tr>
+                   <td className="p-3 border font-bold text-center">Month 3</td>
+                   <td className="p-3 border">Deploy global load optimized NextJS build.</td>
+                   <td className="p-3 border flex items-center gap-2"><CheckSquare className="w-4 h-4 text-purple-600 print:text-black"/> Score 100 on Core Web Vitals</td>
+                </tr>
+              </tbody>
+           </table>
+         </div>
+
       </div>
 
-      <style jsx global>{`
+      <style dangerouslySetInnerHTML={{__html: `
         @media print {
-          body {
-            background: white !important;
-            padding: 0 !important;
+          body * {
+            visibility: hidden;
           }
-          .sidebar-inset, header, .copilot-widget {
+          #print-area, #print-area * {
+            visibility: visible;
+          }
+          #print-area {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
+          }
+          .print\\:hidden {
             display: none !important;
           }
-          main {
-            margin: 0 !important;
-            padding: 0 !important;
-          }
         }
-      `}</style>
+      `}} />
     </div>
   );
 }

@@ -3,204 +3,150 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
-  Eye, 
-  TrendingUp, 
-  TrendingDown, 
-  AlertCircle, 
-  Plus, 
-  Trash2, 
-  Briefcase,
-  BellRing,
-  Search,
-  ArrowUpRight
-} from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { 
   LineChart, 
   Line, 
-  ResponsiveContainer,
-  YAxis
+  XAxis, 
+  YAxis, 
+  CartesianGrid, 
+  Tooltip, 
+  ResponsiveContainer 
 } from 'recharts';
+import { 
+  BookmarkCheck, 
+  TrendingUp, 
+  Briefcase, 
+  Trash2, 
+  BellRing, 
+  ExternalLink,
+  Settings2,
+  AlertTriangle
+} from 'lucide-react';
 
-// Mock Data
-const initialWatchlist = [
-  { 
-    id: '1', 
-    role: 'Senior AI Solutions Architect', 
-    demand: 92, 
-    trend: [65, 70, 72, 85, 88, 92], 
-    change: 14, 
-    alert: true,
-    location: 'Remote'
-  },
-  { 
-    id: '2', 
-    role: 'Principal Frontend Engineer', 
-    demand: 78, 
-    trend: [82, 80, 79, 78, 77, 78], 
-    change: -2, 
-    alert: false,
-    location: 'New York'
-  },
-  { 
-    id: '3', 
-    role: 'Staff Product Designer', 
-    demand: 85, 
-    trend: [70, 75, 74, 80, 82, 85], 
-    change: 8, 
-    alert: false,
-    location: 'San Francisco'
-  },
+const mockWatchlist = [
+  { id: '1', role: 'Staff Software Engineer', companyType: 'Fintech Startup', matchScore: 88, salary: '$160k-$190k', demandRise: 15, trend: [40, 45, 55, 60, 75, 88], color: '#8b5cf6' },
+  { id: '2', role: 'AI Solutions Architect', companyType: 'Enterprise', matchScore: 82, salary: '$180k-$210k', demandRise: 8, trend: [60, 62, 60, 65, 75, 82], color: '#3b82f6' },
+  { id: '3', role: 'Lead Frontend Developer', companyType: 'E-commerce', matchScore: 94, salary: '$130k-$160k', demandRise: -5, trend: [80, 85, 90, 85, 70, 65], color: '#f43f5e' }
+];
+
+const mockChartData = [
+  { day: 'Day 1', role1: 40, role2: 60, role3: 80 },
+  { day: 'Day 6', role1: 45, role2: 62, role3: 85 },
+  { day: 'Day 12', role1: 55, role2: 60, role3: 90 },
+  { day: 'Day 18', role1: 60, role2: 65, role3: 85 },
+  { day: 'Day 24', role1: 75, role2: 75, role3: 70 },
+  { day: 'Day 30', role1: 88, role2: 82, role3: 65 },
 ];
 
 export default function WatchlistPage() {
-  const [watchlist, setWatchlist] = useState(initialWatchlist);
-  const [newRole, setNewRole] = useState('');
+  const [watchlist, setWatchlist] = useState(mockWatchlist);
+  const [threshold, setThreshold] = useState(10);
+  const [showSettings, setShowSettings] = useState(false);
 
   const removeRole = (id: string) => {
-    setWatchlist(watchlist.filter(item => item.id !== id));
-  };
-
-  const addRole = () => {
-    if (watchlist.length >= 10 || !newRole.trim()) return;
-    const newItem = {
-      id: Math.random().toString(36).substr(2, 9),
-      role: newRole,
-      demand: 50 + Math.floor(Math.random() * 40),
-      trend: [40, 45, 48, 52, 50, 55],
-      change: 5,
-      alert: false,
-      location: 'Global'
-    };
-    setWatchlist([newItem, ...watchlist]);
-    setNewRole('');
+    setWatchlist(watchlist.filter(w => w.id !== id));
   };
 
   return (
-    <div className="max-w-6xl mx-auto space-y-8">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div>
-          <h1 className="text-3xl font-bold font-headline tracking-tight">Role Watchlist</h1>
-          <p className="text-muted-foreground">Track demand trends and market movements for your target roles.</p>
-        </div>
-        <div className="flex items-center gap-2">
-           <Badge variant="secondary" className="h-6">
-             {watchlist.length}/10 Roles
-           </Badge>
-           <div className="flex gap-2">
-             <Input 
-                placeholder="Add role to track..." 
-                className="w-[200px] h-9 bg-muted/50"
-                value={newRole}
-                onChange={(e) => setNewRole(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && addRole()}
-             />
-             <Button size="sm" onClick={addRole} disabled={watchlist.length >= 10 || !newRole.trim()} className="bg-purple-600 hover:bg-purple-700">
-               <Plus className="w-4 h-4" />
-             </Button>
-           </div>
-        </div>
+    <div className="max-w-7xl mx-auto space-y-8">
+      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+         <div className="space-y-1">
+           <h1 className="text-3xl font-bold font-headline flex items-center gap-3">
+             <BookmarkCheck className="w-8 h-8 text-purple-600" /> Watchlist
+           </h1>
+           <p className="text-muted-foreground">Monitor demand vectors for your targeted roles.</p>
+         </div>
+         <button onClick={() => setShowSettings(!showSettings)} className="flex items-center gap-2 px-4 py-2 border rounded-xl hover:bg-muted transition-colors text-sm font-bold shadow-sm">
+           <Settings2 className="w-4 h-4" /> Alert Profile
+         </button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        <AnimatePresence>
-          {watchlist.map((item) => (
-            <motion.div
-              key={item.id}
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.9, transition: { duration: 0.2 } }}
-              layout
-            >
-              <Card className="group border-purple-500/10 shadow-lg hover:shadow-xl transition-all h-full relative overflow-hidden">
-                {item.alert && (
-                  <div className="absolute top-0 right-0 p-1 bg-red-500 rounded-bl-xl z-10">
-                    <BellRing className="w-3 h-3 text-white animate-bounce" />
-                  </div>
-                )}
-                <CardHeader className="pb-2">
-                  <div className="flex justify-between items-start">
-                    <div className="p-2 rounded-lg bg-muted group-hover:bg-purple-50 dark:group-hover:bg-purple-900/10 transition-colors">
-                       <Briefcase className="w-4 h-4 text-purple-600" />
-                    </div>
-                    <Button 
-                      variant="ghost" 
-                      size="icon" 
-                      className="h-8 w-8 text-muted-foreground hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
-                      onClick={() => removeRole(item.id)}
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
-                  </div>
-                  <CardTitle className="text-lg font-bold mt-2 line-clamp-1">{item.role}</CardTitle>
-                  <CardDescription className="text-[10px] font-bold uppercase tracking-widest">{item.location}</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="flex justify-between items-end">
-                    <div>
-                      <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest mb-1">Market Demand</p>
-                      <div className="flex items-center gap-2">
-                        <span className="text-3xl font-black">{item.demand}%</span>
-                        <Badge className={`text-[10px] h-4 ${item.change >= 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-                          {item.change >= 10 && <AlertCircle className="w-2.5 h-2.5 mr-1" />}
-                          {item.change >= 0 ? '+' : ''}{item.change}%
-                        </Badge>
-                      </div>
-                    </div>
-                    {item.change >= 10 && (
-                      <Badge className="bg-red-500 text-white border-none animate-pulse">Hot Market</Badge>
-                    )}
-                  </div>
-
-                  <div className="h-20 w-full mt-2">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <LineChart data={item.trend.map(val => ({ val }))}>
-                        <Line 
-                          type="monotone" 
-                          dataKey="val" 
-                          stroke={item.change >= 0 ? '#10b981' : '#ef4444'} 
-                          strokeWidth={2} 
-                          dot={false}
-                        />
-                        <YAxis hide domain={['dataMin - 5', 'dataMax + 5']} />
-                      </LineChart>
-                    </ResponsiveContainer>
-                  </div>
-
-                  <div className="pt-4 border-t flex justify-between items-center text-xs">
-                     <span className="text-muted-foreground">Confidence: 85%</span>
-                     <Button variant="link" size="sm" className="h-auto p-0 text-purple-600 flex gap-1">
-                       View Jobs <ArrowUpRight className="w-3 h-3" />
-                     </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            </motion.div>
-          ))}
-        </AnimatePresence>
-
-        {watchlist.length === 0 && (
-          <div className="col-span-full h-64 flex flex-col items-center justify-center text-muted-foreground border-2 border-dashed rounded-3xl">
-             <Eye className="w-12 h-12 opacity-10 mb-4" />
-             <p>No roles on your watchlist. Start by adding one above.</p>
-          </div>
+      <AnimatePresence>
+        {showSettings && (
+          <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="overflow-hidden">
+             <div className="bg-white dark:bg-slate-900 border rounded-2xl p-6 shadow-sm mb-6">
+                <h3 className="font-bold flex items-center gap-2 mb-4"><BellRing className="w-5 h-5 text-amber-500" /> Notification Thresholds</h3>
+                <div className="max-w-md space-y-4">
+                   <p className="text-sm text-muted-foreground">Alert me via push notification when demand for a saved role spikes above this percentage threshold across 7 days.</p>
+                   <div className="flex items-center gap-4">
+                      <input type="range" min="5" max="50" step="5" value={threshold} onChange={e=>setThreshold(parseInt(e.target.value))} className="flex-1 accent-purple-600" />
+                      <span className="font-bold text-xl">{threshold}%</span>
+                   </div>
+                </div>
+             </div>
+          </motion.div>
         )}
-      </div>
+      </AnimatePresence>
 
-      <Card className="bg-gradient-to-r from-purple-600 to-indigo-700 text-white border-none shadow-xl">
-        <CardContent className="p-8 flex flex-col md:flex-row items-center justify-between gap-6">
-           <div className="space-y-2">
-             <h2 className="text-2xl font-bold">Intelligent Alerts</h2>
-             <p className="text-purple-100/70 max-w-md">Our AI monitors 14.5M job postings daily. Get notified the second demand for your dream role kicks into high gear.</p>
-           </div>
-           <Button className="bg-white text-purple-700 hover:bg-purple-50 font-bold px-8 h-12 rounded-xl">
-             Enable Smart Notifications
-           </Button>
-        </CardContent>
-      </Card>
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+         
+         {/* Roles List */}
+         <div className="lg:col-span-4 space-y-4">
+            <h3 className="font-bold text-lg mb-2">Saved Opportunities ({watchlist.length}/10)</h3>
+            <AnimatePresence>
+               {watchlist.map(role => (
+                 <motion.div layout initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} key={role.id} className="bg-white dark:bg-slate-900 border rounded-2xl p-5 shadow-sm group">
+                    <div className="flex justify-between items-start mb-2">
+                       <div>
+                         <h4 className="font-bold text-lg leading-tight">{role.role}</h4>
+                         <p className="text-sm text-muted-foreground flex items-center gap-1 mt-1"><Briefcase className="w-3 h-3"/> {role.companyType}</p>
+                       </div>
+                       {role.demandRise >= threshold && (
+                         <div className="p-1.5 bg-amber-100 text-amber-700 rounded-lg flex shrink-0" title="Demand Spiking!">
+                            <AlertTriangle className="w-4 h-4" />
+                         </div>
+                       )}
+                    </div>
+
+                    <div className="flex items-center justify-between text-sm font-bold border-y py-3 my-3">
+                       <span className="bg-green-100 text-green-700 px-2 py-0.5 rounded">{role.matchScore}% Profile Match</span>
+                       <span>{role.salary}</span>
+                    </div>
+
+                    <div className="flex items-end justify-between">
+                       <div className="space-y-1">
+                          <p className="text-[10px] uppercase font-bold text-muted-foreground">30-Day Velocity</p>
+                          <div className={`flex items-center gap-1 font-bold ${role.demandRise > 0 ? 'text-green-600' : 'text-red-500'}`}>
+                             {role.demandRise > 0 ? <TrendingUp className="w-4 h-4"/> : <TrendingUp className="w-4 h-4 rotate-180 transform"/>} 
+                             {Math.abs(role.demandRise)}%
+                          </div>
+                       </div>
+                       <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <button onClick={() => removeRole(role.id)} className="p-2 border rounded-full text-slate-400 hover:text-red-500 hover:border-red-200 hover:bg-red-50 transition-colors"><Trash2 className="w-4 h-4" /></button>
+                          <button onClick={() => window.open(`https://www.google.com/search?q=${role.role}+jobs`, '_blank')} className="p-2 bg-purple-600 text-white rounded-full hover:bg-purple-700 transition-colors shadow-md"><ExternalLink className="w-4 h-4" /></button>
+                       </div>
+                    </div>
+                 </motion.div>
+               ))}
+               {watchlist.length === 0 && (
+                 <div className="text-center p-8 border-2 border-dashed rounded-2xl text-muted-foreground">
+                    <BookmarkCheck className="w-12 h-12 opacity-20 mx-auto mb-2" />
+                    <p>Your watchlist is empty.</p>
+                 </div>
+               )}
+            </AnimatePresence>
+         </div>
+
+         {/* Chart Area */}
+         <div className="lg:col-span-8">
+            <div className="bg-white dark:bg-slate-900 border rounded-3xl p-6 shadow-sm sticky top-6">
+               <h3 className="font-bold text-lg mb-6 flex items-center gap-2">Macro Demand Trends</h3>
+               <div className="h-96 w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                     <LineChart data={mockChartData} margin={{ top: 20, right: 30, left: 0, bottom: 0 }}>
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                        <XAxis dataKey="day" axisLine={false} tickLine={false} tick={{ fontSize: 12 }} />
+                        <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12 }} />
+                        <Tooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }} />
+                        <Line type="monotone" dataKey="role1" name={mockWatchlist[0]?.role || 'Role 1'} stroke="#8b5cf6" strokeWidth={3} dot={{r: 4}} activeDot={{ r: 6 }} />
+                        <Line type="monotone" dataKey="role2" name={mockWatchlist[1]?.role || 'Role 2'} stroke="#3b82f6" strokeWidth={3} dot={{r: 4}} />
+                        <Line type="monotone" dataKey="role3" name={mockWatchlist[2]?.role || 'Role 3'} stroke="#f43f5e" strokeWidth={3} dot={{r: 4}} />
+                     </LineChart>
+                  </ResponsiveContainer>
+               </div>
+            </div>
+         </div>
+         
+      </div>
     </div>
   );
 }

@@ -1,277 +1,300 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { 
-  TrendingUp, 
-  AlertCircle, 
+  AlertTriangle, 
   ArrowRight, 
-  Rocket, 
-  CheckCircle2, 
-  Calendar,
-  Zap,
-  Briefcase
+  Briefcase, 
+  Building, 
+  ChevronRight, 
+  Lightbulb, 
+  Loader2, 
+  MapPin, 
+  TrendingUp,
+  X,
+  Target
 } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Progress } from '@/components/ui/progress';
 import { 
-  Treemap, 
   ResponsiveContainer, 
-  Tooltip, 
+  Treemap, 
   LineChart, 
-  Line 
+  Line, 
+  Tooltip 
 } from 'recharts';
+import { getProfile, getDailyMetrics, updateDailyMetric } from '@/lib/storage';
+import { generateDashboardInsightsFlow } from '@/ai/flows/generateDashboardInsightsFlow';
+import { DashboardInsights } from '@/types';
 
-// Mock Data
-const gravityScore = 78;
-const skillData = [
-  { name: 'Technical', children: [
-    { name: 'TypeScript', size: 90 },
-    { name: 'React', size: 85 },
-    { name: 'Next.js', size: 80 },
-    { name: 'Node.js', size: 70 },
-  ]},
-  { name: 'Design', children: [
-    { name: 'Framer Motion', size: 65 },
-    { name: 'Tailwind CSS', size: 95 },
-    { name: 'UI/UX', size: 75 },
-  ]},
-  { name: 'Soft Skills', children: [
-    { name: 'Leadership', size: 60 },
-    { name: 'Strategy', size: 55 },
-  ]}
+// Skill Heatmap data format for Recharts Treemap
+const heatmapData = [
+  { name: 'Frontend', children: [{ name: 'React', size: 90 }, { name: 'Next.js', size: 80 }, { name: 'Tailwind', size: 70 }] },
+  { name: 'Backend', children: [{ name: 'Node.js', size: 60 }, { name: 'Python', size: 40 }] },
+  { name: 'DevOps', children: [{ name: 'AWS', size: 30 }, { name: 'Docker', size: 25 }] },
+  { name: 'Soft Skills', children: [{ name: 'Leadership', size: 85 }, { name: 'Communication', size: 95 }] }
 ];
 
-const priorityActions = [
-  { id: 1, action: "Master Advanced Genkit Flows", effort: "Medium", impact: "High", icon: <Zap className="w-4 h-4 text-purple-500" /> },
-  { id: 2, action: "Apply for 'Principal AI Engineer' role", effort: "Low", impact: "High", icon: <Briefcase className="w-4 h-4 text-blue-500" /> },
-  { id: 3, action: "Complete Cloud Architect Cert", effort: "High", impact: "Medium", icon: <CheckCircle2 className="w-4 h-4 text-green-500" /> },
-];
+const COLORS = ['#8884d8', '#83a6ed', '#8dd1e1', '#82ca9d', '#a4de6c'];
 
-const launchWindows = [
-  { id: 1, role: "Senior AI Engineer", company: "Google", match: 94, location: "Remote" },
-  { id: 2, role: "Principal Product Engineer", company: "Vercel", match: 89, location: "SF" },
-  { id: 3, role: "CTO, Early Stage AI Startup", company: "Stealth", match: 85, location: "NYC" },
-  { id: 4, role: "Staff Engineer", company: "Meta", match: 82, location: "London" },
-  { id: 5, role: "AI Solutions Architect", company: "AWS", match: 88, location: "Remote" },
-];
-
-const riskFlags = [
-  { title: "Skill Stagnation", severity: "High", desc: "Your 'Docker' usage is Decaying." },
-  { title: "Market Volatility", severity: "Medium", desc: "Low demand for 'Python 3.8' in NYC." },
-  { title: "Career Gap", severity: "Low", desc: "3 months since last certification." },
-];
-
-const sparklineData = [
-  { val: 10 }, { val: 25 }, { val: 20 }, { val: 45 }, { val: 35 }, { val: 60 }, { val: 78 }
-];
-
-const containerVariants = {
-  hidden: { opacity: 0, y: 20 },
-  visible: { 
-    opacity: 1, 
-    y: 0,
-    transition: { staggerChildren: 0.1 }
-  }
-};
-
-const itemVariants = {
-  hidden: { opacity: 0, y: 10 },
-  visible: { opacity: 1, y: 0 }
+const CustomTreemapContent = (props: any) => {
+  const { depth, x, y, width, height, index, name } = props;
+  return (
+    <g>
+      <rect
+        x={x}
+        y={y}
+        width={width}
+        height={height}
+        style={{
+          fill: depth < 2 ? COLORS[index % COLORS.length] : '#ffffff00',
+          stroke: '#fff',
+          strokeWidth: 2 / (depth + 1e-10),
+          strokeOpacity: 1 / (depth + 1e-10),
+        }}
+      />
+      {width > 50 && height > 30 && (
+        <text x={x + width / 2} y={y + height / 2} textAnchor="middle" fill="#fff" fontSize={12} dominantBaseline="central">
+          {name}
+        </text>
+      )}
+    </g>
+  );
 };
 
 export default function DashboardPage() {
+  const [data, setData] = useState<DashboardInsights | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  
+  const gravityHistory = getDailyMetrics('gravity_score');
+  
+  const loadData = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const profile = getProfile() || {};
+      const insights = await generateDashboardInsightsFlow({ profile });
+      setData(insights);
+      updateDailyMetric('gravity_score', insights.gravityScore);
+    } catch (err) {
+      setError("Failed to load dashboard insights");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="flex-1 flex flex-col items-center justify-center min-h-[60vh] space-y-4">
+        <Loader2 className="w-10 h-10 animate-spin text-purple-600" />
+        <p className="text-muted-foreground animate-pulse">Running Ollama models...</p>
+      </div>
+    );
+  }
+
+  if (error || !data) {
+    return (
+      <div className="flex-1 flex flex-col items-center justify-center min-h-[60vh] space-y-4">
+        <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center">
+           <AlertTriangle className="w-8 h-8 text-red-600" />
+        </div>
+        <h3 className="font-bold text-xl">Could not load dashboard</h3>
+        <p className="text-muted-foreground">{error}</p>
+        <button onClick={loadData} className="px-6 py-2 bg-purple-600 text-white rounded-lg">Retry AI Generation</button>
+      </div>
+    );
+  }
+
   return (
     <motion.div 
-      variants={containerVariants}
-      initial="hidden"
-      animate="visible"
-      className="space-y-6"
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="space-y-6 max-w-7xl mx-auto"
     >
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div>
-          <h1 className="text-3xl font-bold font-headline tracking-tight">Your Career Pulse</h1>
-          <p className="text-muted-foreground">Welcome back, Ansh. Here is what is happening in your career.</p>
-        </div>
-        <div className="flex gap-2">
-          <Button variant="outline" className="flex gap-2">
-            <Calendar className="w-4 h-4" />
-            Schedule Review
-          </Button>
-          <Button className="bg-purple-600 hover:bg-purple-700 flex gap-2">
-            <Rocket className="w-4 h-4" />
-            Accelerate Path
-          </Button>
-        </div>
+      <div className="flex justify-between items-end">
+         <div className="space-y-1">
+           <h1 className="text-3xl font-bold font-headline">Welcome back</h1>
+           <p className="text-muted-foreground">Here is your strategic career intelligence for today.</p>
+         </div>
+         <button onClick={loadData} className="px-4 py-2 border rounded-lg text-sm hover:bg-muted flex items-center gap-2">
+           <TrendingUp className="w-4 h-4" /> Refresh Signals
+         </button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6">
-        {/* Gravity Score Card */}
-        <Card className="md:col-span-1 border-purple-500/10 shadow-sm relative overflow-hidden group">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Gravity Score</CardTitle>
-          </CardHeader>
-          <CardContent className="flex flex-col items-center justify-center pt-2">
-            <div className="relative w-32 h-32 mb-4">
-              <svg className="w-full h-full transform -rotate-90">
-                <circle 
-                  cx="64" cy="64" r="58" 
-                  fill="none" 
-                  stroke="currentColor" 
-                  strokeWidth="8" 
-                  className="text-purple-100 dark:text-purple-900/20"
-                />
-                <motion.circle 
-                  cx="64" cy="64" r="58" 
-                  fill="none" 
-                  stroke="currentColor" 
-                  strokeWidth="8" 
-                  strokeDasharray="364.4"
-                  initial={{ strokeDashoffset: 364.4 }}
-                  animate={{ strokeDashoffset: 364.4 - (364.4 * gravityScore) / 100 }}
-                  transition={{ duration: 1.5, ease: "easeOut" }}
-                  strokeLinecap="round"
-                  className="text-purple-600"
-                />
-              </svg>
-              <div className="absolute inset-0 flex flex-col items-center justify-center">
-                <span className="text-4xl font-bold">{gravityScore}</span>
-                <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-tighter">Rising</span>
-              </div>
-            </div>
-            <div className="w-full h-10 mt-2">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={sparklineData}>
-                  <Line type="monotone" dataKey="val" stroke="#9333ea" strokeWidth={2} dot={false} />
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
-            <p className="text-[11px] text-center mt-2 text-muted-foreground">
-              Top 5% for Senior AI Engineers
-            </p>
-          </CardContent>
-        </Card>
+      <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
+        
+        {/* Left Column (Main Stats + Heatmap) */}
+        <div className="md:col-span-8 space-y-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+             {/* Gravity Score Card */}
+             <div className="p-6 bg-white dark:bg-slate-900 border rounded-2xl shadow-sm relative overflow-hidden group">
+                <div className="flex justify-between items-start z-10 relative">
+                   <div>
+                     <h3 className="font-bold text-lg">Gravity Score</h3>
+                     <p className="text-sm text-muted-foreground">Your career momentum score</p>
+                   </div>
+                   <Target className="text-purple-200 dark:text-purple-900 w-12 h-12 absolute right-4 top-4 transform group-hover:scale-110 transition-transform" />
+                </div>
+                <div className="mt-6 flex items-center gap-6 z-10 relative">
+                   <div className="relative size-24 shrink-0">
+                      <svg viewBox="0 0 36 36" className="size-24 transform -rotate-90">
+                         <path
+                           className="text-muted/30"
+                           strokeWidth="3"
+                           stroke="currentColor"
+                           fill="none"
+                           d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                         />
+                         <path
+                           className={`${data.gravityScore > 70 ? 'text-green-500' : data.gravityScore > 40 ? 'text-amber-500' : 'text-red-500'} transition-all duration-1000 ease-out`}
+                           strokeWidth="3"
+                           strokeDasharray={`${data.gravityScore}, 100`}
+                           strokeLinecap="round"
+                           stroke="currentColor"
+                           fill="none"
+                           d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                         />
+                      </svg>
+                      <div className="absolute inset-0 flex items-center justify-center flex-col">
+                         <span className="text-2xl font-bold">{data.gravityScore}</span>
+                      </div>
+                   </div>
+                   <div className="flex-1">
+                      <div className="h-12 w-full">
+                         <ResponsiveContainer width="100%" height="100%">
+                            <LineChart data={gravityHistory}>
+                               <Line type="monotone" dataKey="value" stroke="#8b5cf6" strokeWidth={2} dot={false} />
+                            </LineChart>
+                         </ResponsiveContainer>
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-2 text-right">7-day trend <span className="text-green-500">+{data.gravityTrend}</span></p>
+                   </div>
+                </div>
+             </div>
 
-        {/* Skill Heatmap Treemap */}
-        <Card className="md:col-span-2 lg:col-span-3 border-purple-500/10">
-          <CardHeader className="pb-2 flex flex-row items-center justify-between">
-            <div>
-              <CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Skill Heatmap</CardTitle>
-              <CardDescription>Strength by Category & Expertise</CardDescription>
-            </div>
-            <TrendingUp className="w-4 h-4 text-green-500" />
-          </CardHeader>
-          <CardContent className="h-[250px]">
-             <ResponsiveContainer width="100%" height="100%">
-              <Treemap
-                data={skillData}
-                dataKey="size"
-                aspectRatio={4 / 3}
-                stroke="#fff"
-                fill="#9333ea"
-              >
-                <Tooltip 
-                  contentStyle={{ backgroundColor: '#1f2937', borderRadius: '8px', border: 'none', color: '#fff' }}
-                  itemStyle={{ color: '#fff' }}
-                />
-              </Treemap>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-      </div>
+             {/* Priority Actions */}
+             <div className="p-6 bg-white dark:bg-slate-900 border rounded-2xl shadow-sm flex flex-col">
+                <div className="flex items-center gap-2 mb-4">
+                  <Lightbulb className="w-5 h-5 text-amber-500" />
+                  <h3 className="font-bold text-lg">AI Priority Actions</h3>
+                </div>
+                <div className="flex-1 space-y-3 overflow-y-auto">
+                   {data.priorityActions.map(action => (
+                     <div key={action.id} className="p-3 bg-slate-50 dark:bg-slate-800/50 border rounded-xl">
+                        <div className="flex justify-between items-start mb-1">
+                           <h4 className="font-semibold text-sm">{action.title}</h4>
+                           <span className={`text-[10px] uppercase font-bold px-2 py-0.5 rounded-full ${action.impact === 'High' ? 'bg-red-100 text-red-700' : 'bg-blue-100 text-blue-700'}`}>
+                             {action.impact} Impact
+                           </span>
+                        </div>
+                        <p className="text-xs text-muted-foreground mb-2">{action.description}</p>
+                        <button className="text-xs font-medium text-purple-600 hover:text-purple-700 flex items-center gap-1">
+                          Start Now <ArrowRight className="w-3 h-3" />
+                        </button>
+                     </div>
+                   ))}
+                </div>
+             </div>
+          </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Priority Actions */}
-        <Card className="lg:col-span-2 border-purple-500/10">
-          <CardHeader>
-            <CardTitle className="text-lg font-bold">Priority Actions</CardTitle>
-            <CardDescription>AI-generated steps to increase your Gravity Score</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {priorityActions.map((action) => (
-              <motion.div 
-                key={action.id}
-                variants={itemVariants}
-                className="flex items-center justify-between p-4 rounded-xl bg-muted/50 hover:bg-muted transition-colors cursor-pointer group"
-              >
-                <div className="flex items-center gap-4">
-                  <div className="p-2 rounded-lg bg-background border shadow-sm">
-                    {action.icon}
+          {/* Skill Heatmap */}
+          <div className="p-6 bg-white dark:bg-slate-900 border rounded-2xl shadow-sm">
+             <h3 className="font-bold text-lg mb-6">Skill Density Heatmap</h3>
+             <div className="h-64 w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                   <Treemap
+                     data={heatmapData}
+                     dataKey="size"
+                     aspectRatio={4 / 3}
+                     stroke="#fff"
+                     content={<CustomTreemapContent />}
+                   />
+                </ResponsiveContainer>
+             </div>
+          </div>
+          
+          {/* Launch Windows Feed */}
+          <div className="p-6 bg-white dark:bg-slate-900 border rounded-2xl shadow-sm">
+             <div className="flex justify-between items-center mb-6">
+                <h3 className="font-bold text-lg">Launch Windows</h3>
+                <div className="flex gap-2">
+                   <button className="px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-xs font-bold">Best Match</button>
+                   <button className="px-3 py-1 bg-muted rounded-full text-xs font-medium hover:bg-slate-200">Remote</button>
+                </div>
+             </div>
+             <div className="space-y-3">
+                {data.launchWindows.map(window => (
+                  <div key={window.id} className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 border rounded-xl hover:border-purple-300 transition-colors bg-slate-50 dark:bg-slate-950/50">
+                     <div className="flex gap-4 items-center mb-3 sm:mb-0">
+                        <div className="w-12 h-12 bg-white dark:bg-slate-800 border shadow-sm rounded-lg flex items-center justify-center shrink-0">
+                           <Building className="w-6 h-6 text-muted-foreground" />
+                        </div>
+                        <div>
+                           <h4 className="font-bold">{window.role}</h4>
+                           <div className="flex items-center gap-3 text-xs text-muted-foreground mt-1">
+                              <span className="flex items-center gap-1"><Briefcase className="w-3 h-3" /> {window.companyType}</span>
+                              <span className="flex items-center gap-1"><MapPin className="w-3 h-3" /> {window.location}</span>
+                           </div>
+                        </div>
+                     </div>
+                     <div className="flex items-center gap-4 w-full sm:w-auto mt-2 sm:mt-0">
+                        <div className="text-right flex-1 sm:flex-none">
+                           <p className="font-bold text-sm bg-green-100 text-green-700 inline-block px-2 py-0.5 rounded-md">{window.matchScore}% Match</p>
+                           <p className="text-xs text-muted-foreground mt-1">{window.salaryRange}</p>
+                        </div>
+                        <button className="p-2 border rounded-lg hover:bg-purple-50 text-purple-600 transition-colors">
+                           <ChevronRight className="w-5 h-5" />
+                        </button>
+                     </div>
                   </div>
-                  <div>
-                    <p className="font-medium text-sm">{action.action}</p>
-                    <div className="flex gap-2 mt-1">
-                      <Badge variant="secondary" className="text-[10px] h-4">Effort: {action.effort}</Badge>
-                      <Badge className="text-[10px] h-4 bg-purple-100 text-purple-700 hover:bg-purple-100 border-none">Impact: {action.impact}</Badge>
-                    </div>
-                  </div>
-                </div>
-                <ArrowRight className="w-4 h-4 text-muted-foreground group-hover:translate-x-1 transition-transform" />
-              </motion.div>
-            ))}
-          </CardContent>
-        </Card>
-
-        {/* Risk Flags */}
-        <Card className="border-red-500/10 bg-red-500/[0.02]">
-          <CardHeader>
-            <CardTitle className="text-lg font-bold flex items-center gap-2">
-              <AlertCircle className="w-5 h-5 text-red-500" />
-              Risk Flags
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {riskFlags.map((risk, index) => (
-              <div key={index} className="space-y-1">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-semibold">{risk.title}</span>
-                  <Badge variant={risk.severity === 'High' ? 'destructive' : 'secondary'} className="text-[9px] px-1.5 h-3.5">
-                    {risk.severity}
-                  </Badge>
-                </div>
-                <p className="text-xs text-muted-foreground">{risk.desc}</p>
-                {index < riskFlags.length - 1 && <div className="h-px bg-border pt-2" />}
-              </div>
-            ))}
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Launch Windows */}
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <h2 className="text-xl font-bold">Launch Windows</h2>
-          <Button variant="link" className="text-purple-600 p-0 h-auto">View All Opportunities</Button>
+                ))}
+             </div>
+          </div>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-          {launchWindows.map((job) => (
-            <motion.div 
-              key={job.id} 
-              variants={itemVariants}
-              whileHover={{ y: -5 }}
-              className="p-4 rounded-2xl bg-background border border-purple-500/5 shadow-sm hover:shadow-md transition-all cursor-pointer"
-            >
-              <div className="flex justify-between items-start mb-3">
-                <Badge className="bg-green-100 text-green-700 hover:bg-green-100 border-none text-[10px]">
-                  {job.match}% Match
-                </Badge>
-                <div className="size-8 rounded-full bg-muted flex items-center justify-center text-[10px] font-bold">
-                  {job.company[0]}
-                </div>
+
+        {/* Right Column (Sidebar) */}
+        <div className="md:col-span-4 space-y-6">
+           {/* Risk Flags Panel */}
+           <div className="bg-white dark:bg-slate-900 border rounded-2xl shadow-sm overflow-hidden">
+              <div className="bg-slate-50 dark:bg-slate-950/50 p-4 border-b flex items-center gap-2">
+                 <AlertTriangle className="w-5 h-5 text-red-500" />
+                 <h3 className="font-bold">Risk Flags</h3>
               </div>
-              <h3 className="font-bold text-sm truncate">{job.role}</h3>
-              <p className="text-xs text-muted-foreground mt-1">{job.company} • {job.location}</p>
-              <div className="mt-4 flex flex-col gap-1.5">
-                <div className="flex justify-between items-center text-[10px]">
-                  <span className="text-muted-foreground">Confidence</span>
-                  <span>92%</span>
-                </div>
-                <Progress value={92} className="h-1 bg-muted [&>div]:bg-green-500" />
+              <div className="p-4 space-y-3">
+                 {data.riskFlags.map((risk, idx) => (
+                   <motion.div 
+                     key={risk.id} 
+                     initial={{ opacity: 0, x: 20 }}
+                     animate={{ opacity: 1, x: 0 }}
+                     transition={{ delay: idx * 0.1 }}
+                     className={`p-3 rounded-lg flex justify-between items-start gap-3 border ${
+                       risk.severity === 'Critical' ? 'bg-red-50 dark:bg-red-900/10 border-red-100 dark:border-red-900/30 text-red-900 dark:text-red-200' :
+                       risk.severity === 'Warning' ? 'bg-amber-50 dark:bg-amber-900/10 border-amber-100 dark:border-amber-900/30 text-amber-900 dark:text-amber-200' :
+                       'bg-blue-50 dark:bg-blue-900/10 border-blue-100 dark:border-blue-900/30 text-blue-900 dark:text-blue-200'
+                     }`}
+                   >
+                     <p className="text-sm font-medium leading-tight">{risk.title}</p>
+                     <button className="opacity-50 hover:opacity-100"><X className="w-4 h-4" /></button>
+                   </motion.div>
+                 ))}
+                 {data.riskFlags.length === 0 && (
+                   <p className="text-center text-sm text-muted-foreground p-4">No active risks detected.</p>
+                 )}
               </div>
-            </motion.div>
-          ))}
+           </div>
+
+           {/* Quick Stats Sidebar Ad */}
+           <div className="bg-gradient-to-tr from-purple-600 to-indigo-600 rounded-2xl p-6 text-white shadow-lg">
+              <h3 className="font-bold text-lg mb-2">Upgrade to Pro</h3>
+              <p className="text-sm text-white/80 mb-4">Unlock advanced labor market analysis and personalized mock interviews.</p>
+              <button className="w-full py-2 bg-white text-purple-700 font-bold rounded-xl hover:bg-slate-100 transition-colors">
+                View Features
+              </button>
+           </div>
         </div>
       </div>
     </motion.div>
