@@ -1,72 +1,64 @@
-# Ralph Loop for Antigravity - Community Issues
+# SkillMapper AI 🚀
 
-Community issue tracker for [Ralph Loop for Antigravity](https://github.com/abhishekbhakat/ralph-loop-for-antigravity), a VS Code extension that enables autonomous AI agent execution using Antigravity.
+SkillMapper AI is a production-grade, AI-powered skill intelligence and career navigation platform. It helps professionals map their current skills, identify gaps, and simulate career paths or migrations with high-fidelity, data-driven insights.
 
-## What is Ralph Loop?
+## ✨ Key Features
 
-Ralph Loop solves two fundamental problems with AI coding assistants:
+- **🤖 AI-Powered Copilot**: Interactive career assistant for personalized guidance.
+- **📊 Adaptive Dashboards**: Real-time visualization of skill supply and demand.
+- **🗺️ Career Route Designer**: Simulate advanced career transitions with AI logic.
+- **🚢 Migration Simulator**: Assess skill portability across industries and geographies.
+- **📈 Learning Path Generator**: Dynamic, personalized roadmaps to reach your career goals.
+- **📱 Onboarding & Tracking**: Seamless multi-step onboarding and progress monitoring.
 
-1. **Context window limitations** - LLMs forget important context mid-task
-2. **Constant oversight required** - AI cannot work autonomously for extended periods
+## 🛠️ Tech Stack
 
-The solution: **externalize memory to files** and run AI agents in **iterative loops** with fresh context per iteration.
+- **Framework**: Next.js 14 (App Router)
+- **Language**: TypeScript
+- **Styling**: Tailwind CSS & Shadcn UI
+- **AI Engine**: Google Genkit & GenAI
+- **Integrations**: Firebase (Storage & Auth)
+- **Design System**: Stitch-optimized custom components
 
-### How It Works
+## 🚀 Getting Started
 
-```
-1. Read tasks from PRD.md (task file)
-2. Check progress in progress.txt
-3. Complete exactly ONE task
-4. Append progress (never delete)
-5. Commit changes
-6. Repeat until all tasks done or max iterations reached
-```
+### Prerequisites
 
-Each iteration spawns a fresh Cascade session, ensuring the agent always has full context by reading from disk rather than relying on conversation memory.
+- Node.js 18+
+- npm or yarn
+- Firebase account (optional, for auth/storage)
 
-## Reporting Issues
+### Installation
 
-Before opening an issue:
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/anshgupta110805/skillmap-ai.git
+   cd skillmap-ai
+   ```
 
-1. **Search existing issues** - Your issue may already be reported
-2. **Check requirements**:
-   - VS Code 1.75.0 or later
-   - Antigravity in agent driven mode
-   - A workspace folder with task files
-3. **Gather information**:
-   - OS and version
-   - VS Code version
-   - Ralph Loop extension version
-   - Steps to reproduce
-   - Relevant logs from the "Ralph Loop" output channel
+2. Install dependencies:
+   ```bash
+   npm install
+   ```
 
-### Issue Templates
+3. Run the development server:
+   ```bash
+   npm run dev
+   ```
 
-| Template             | Use For                                    |
-|----------------------|--------------------------------------------|
-| **Bug Report**       | Something isn't working as expected        |
-| **Feature Request**  | Suggest new features or improvements       |
+4. Open [http://localhost:3000](http://localhost:3000) in your browser.
 
-## Common Issues
+## 📁 Project Structure
 
-### "No task file selected"
-Select a task file in the sidebar Configuration section before starting the loop.
+- `app/`: Next.js application routes and components.
+- `ai/`: AI logic, flows, and schema validation.
+- `components/`: Reusable UI components (Shadcn + custom).
+- `lib/`: Core utilities and adapter layers.
+- `knowledge_base/`: Curated intelligence for skill mapping.
 
-### "No workspace folder open"
-Open a folder in VS Code before starting Ralph Loop.
+## 📄 License
 
-### Loop not responding
-Use `Ralph: Emergency Stop Ralph Loop` from the Command Palette (Cmd/Ctrl+Shift+P).
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-### Token extraction failing
-Ensure Antigravity is running. If auto-discovery fails, manually configure the CSRF token and port in settings.
-
-## Links
-
-- [Extension Repository](https://github.com/abhishekbhakat/ralph-loop-for-antigravity)
-- [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=abhishekbhakat.ralph-loop-for-antigravity)
-- [Open VSX Registry](https://open-vsx.org/extension/abhishekbhakat/ralph-loop-for-antigravity)
-
-## License
-
-MIT
+---
+Built with ❤️ by Ansh Gupta
